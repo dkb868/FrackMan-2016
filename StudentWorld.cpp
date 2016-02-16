@@ -15,6 +15,14 @@ int StudentWorld::init() {
 			m_dirt[i][j] = new Dirt(i,j,this);
 		}
 	}
+
+	for(int i=30; i <= 33; i++) {
+		for(int j = 3; j < 59 ; j ++){
+			delete m_dirt[i][j];
+		}
+	}
+
+	m_frackMan = new FrackMan(this);
 	return GWSTATUS_CONTINUE_GAME;
 }
 
@@ -26,7 +34,6 @@ int StudentWorld::move()
 }
 
 void StudentWorld::cleanUp(){
-
 }
 
 StudentWorld::StudentWorld(std::string assetDir)
@@ -35,3 +42,10 @@ StudentWorld::StudentWorld(std::string assetDir)
 		}
 
 // Students:  Add code to this file (if you wish), StudentWorld.h, Actor.h and Actor.cpp
+
+
+// Destrucotr
+// TODO delete other shits
+StudentWorld::~StudentWorld() {
+	delete m_frackMan;
+}

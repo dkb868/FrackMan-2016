@@ -43,7 +43,7 @@ void Dirt::doSomething(){
     return;
 }
 
-FrackMan::FrackMan(int x, int y, GraphObject::Direction dir, StudentWorld *world) :
+FrackMan::FrackMan(StudentWorld *world) :
     Actor(IID_PLAYER, PLAYER_START_X, PLAYER_START_Y, PLAYER_DIR, PLAYER_SIZE,PLAYER_DEPTH, world){
     setVisible(true);
 }

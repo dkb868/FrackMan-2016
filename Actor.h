@@ -26,7 +26,7 @@ private:
 
 class FrackMan : public Actor {
 public:
-    FrackMan(int x,int y, Direction dir, StudentWorld* world);
+    FrackMan(StudentWorld* world);
     ~FrackMan();
     void doSomething();
 

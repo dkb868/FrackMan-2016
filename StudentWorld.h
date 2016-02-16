@@ -25,6 +25,8 @@ public:
 
 	virtual void cleanUp();
 
+	~StudentWorld();
+
 private:
 	vector<Actor*> m_game_objects;
 	FrackMan* m_frackMan;
