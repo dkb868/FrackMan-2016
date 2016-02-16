@@ -30,7 +30,7 @@ public:
 private:
 	vector<Actor*> m_game_objects;
 	FrackMan* m_frackMan;
-	Dirt* m_dirt[64][59];
+	Dirt* m_dirt[64][60];
 };
 
 #endif // STUDENTWORLD_H_
