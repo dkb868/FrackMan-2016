@@ -27,10 +27,12 @@ public:
 
 	~StudentWorld();
 
+	bool deleteDirt(int x, int y);
+
 private:
 	vector<Actor*> m_game_objects;
 	FrackMan* m_frackMan;
-	Dirt* m_dirt[64][60];
+	Dirt* m_dirt[64][64];
 };
 
 #endif // STUDENTWORLD_H_

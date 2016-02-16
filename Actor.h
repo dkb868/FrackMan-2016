@@ -31,6 +31,8 @@ public:
     void doSomething();
 
 private:
+    // make sure the actor is going to a valid palce
+    bool isValidPosition(int x, int y);
 };
 
 
