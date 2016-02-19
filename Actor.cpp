@@ -2,18 +2,6 @@
 #include "StudentWorld.h"
 #include "GameConstants.h"
 
-// DIRT CONSTANTS
-const GraphObject::Direction DIRT_DIR = GraphObject::right;
-const int DIRT_DEPTH = 3;
-const double DIRT_SIZE = 0.25;
-
-// PLAYER CONSTANTS
-
-const GraphObject::Direction PLAYER_DIR = GraphObject::right;
-const int PLAYER_DEPTH = 0;
-const double PLAYER_SIZE = 1.0;
-const int PLAYER_START_X = 30;
-const int PLAYER_START_Y = 60;
 
 
 // Students:  Add code to this file (if you wish), Actor.h, StudentWorld.h, and StudentWorld.cpp
@@ -53,7 +41,7 @@ FrackMan::~FrackMan() {
 }
 
 // make sure that the postition of fackman is valid
-// TODO move to Actor class
+// TODO move to 'Person' class
 bool FrackMan::isValidPosition(int x, int y) {
     if (x < 61 && x >= 0) {
         if (y >= 0 && y < 61) {
@@ -63,7 +51,7 @@ bool FrackMan::isValidPosition(int x, int y) {
     return false;
 }
 
-// TODO MAKE THIS SHIT DRY
+// TODO improve dryness maybe use array to store coordinates and rewrite isValidPosition
 void FrackMan::doSomething() {
     int ch;
     Direction dir = getDirection();
@@ -124,7 +112,7 @@ void FrackMan::doSomething() {
                 //kill
                 break;
         }
-        // TODO only if player moved thou
+        // TODO only if player moved
         // delete blcoks all around
         for (int i=0; i <= 3; i++){
             for (int j=0; j <= 3; j++){

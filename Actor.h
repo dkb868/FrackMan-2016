@@ -4,6 +4,20 @@
 #include "GraphObject.h"
 #include "StudentWorld.h"
 
+// DIRT CONSTANTS
+const GraphObject::Direction DIRT_DIR = GraphObject::right;
+const int DIRT_DEPTH = 3;
+const double DIRT_SIZE = 0.25;
+
+// PLAYER CONSTANTS
+
+const GraphObject::Direction PLAYER_DIR = GraphObject::right;
+const int PLAYER_DEPTH = 0;
+const double PLAYER_SIZE = 1.0;
+const int PLAYER_START_X = 30;
+const int PLAYER_START_Y = 60;
+
+
 // Class for all Actors
 class Actor : public GraphObject{
 public:

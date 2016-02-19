@@ -9,16 +9,14 @@ GameWorld* createStudentWorld(string assetDir)
 }
 
 int StudentWorld::init() {
-	// intialzie dat dirt though
+	// initialise the dirt
 	for(int i=0;i < 64; i++) {
 		for (int j = 0; j < 60; j++) {
 			m_dirt[i][j] = new Dirt(i, j, this);
 		}
-		// set everything else to nullptr
-		for(int k=60; k < 64; k++) {
-			m_dirt[i][k] = nullptr;
-		}
 	}
+
+	// clear the central hole
 
 	for(int i=30; i <= 33; i++) {
 		for(int j = 4; j <= 59 ; j ++){
@@ -27,7 +25,7 @@ int StudentWorld::init() {
 			m_dirt[i][j] = nullptr;
 		}
 	}
-	
+
 	m_frackMan = new FrackMan(this);
 	return GWSTATUS_CONTINUE_GAME;
 }
@@ -41,25 +39,43 @@ int StudentWorld::move()
 }
 
 void StudentWorld::cleanUp(){
+	// set things to nullptr after being deleted to defend against double frees
+	delete m_frackMan;
+	m_frackMan = nullptr;
+	for (int i = 0; i < 64; i++) {
+		for (int j = 0; j < 64; j++) {
+			delete m_dirt[i][j];
+			m_dirt[i][j] = nullptr;
+		}
+
+	}
 }
 
 StudentWorld::StudentWorld(std::string assetDir)
 : GameWorld(assetDir)
 		{
-			
+			// make all teh dirt nullptr
+			for (int i = 0; i < 64; i++) {
+				for (int j = 0; j < 64; j++) {
+					m_dirt[i][j] = nullptr;
+				}
+
+			}
+
 		}
 
 // Students:  Add code to this file (if you wish), StudentWorld.h, Actor.h and Actor.cpp
 
 
 // Destrucotr
-// TODO delete other shits
 StudentWorld::~StudentWorld() {
+	// set things to nullptr after being deleted to defend against double frees
 	delete m_frackMan;
-
+	m_frackMan = nullptr;
 	for (int i = 0; i < 64; i++) {
 		for (int j = 0; j < 64; j++) {
 			delete m_dirt[i][j];
+			m_dirt[i][j] = nullptr;
 		}
 
 	}

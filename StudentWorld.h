@@ -30,7 +30,7 @@ public:
 	bool deleteDirt(int x, int y);
 
 private:
-	vector<Actor*> m_game_objects;
+	//list<Actor*> m_game_objects;
 	FrackMan* m_frackMan;
 	Dirt* m_dirt[64][64];
 };
