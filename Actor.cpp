@@ -9,16 +9,78 @@
 
 // ACTOR METHODS
 
-Actor::Actor(int imageID, int startX, int startY, Direction dir, double size, unsigned int depth, StudentWorld* world) :
-        GraphObject(imageID, startX, startY, dir, size, depth) {
+Actor::Actor(int imageID, int startX, int startY, Direction dir, double size, unsigned int depth, StudentWorld* world, int hitpoints=1) :
+        GraphObject(imageID, startX, startY, dir, size, depth), m_hitpoints(hitpoints) {
     m_world = world;
+    alive = true;
 }
 
 Actor::~Actor(){
 
 }
 
+
+bool Actor::isAlive() const {
+    return alive;
+}
+
+void Actor::setDead() {
+    alive = false;
+}
+
+
+void Actor::setHitpoints(int hp) {
+    m_hitpoints = hp;
+}
+
+bool Actor::moveForward() {
+    switch (getDirection()) {
+        case GraphObject::left:
+            // if you're facing left, go left
+            if (isValidPosition(getX() - 1, getY())) {
+                moveTo(getX() - 1, getY());
+                return true;
+            } else {
+                moveTo(getX(), getY());
+                return false;
+            }
+            break;
+        case GraphObject::right:
+            // if you're facing right, go right
+            if (isValidPosition(getX() + 1, getY())) {
+                moveTo(getX() + 1 , getY());
+                return true;
+            } else {
+                moveTo(getX(), getY());
+                return false;
+            }
+            break;
+        case GraphObject::down:
+            if (isValidPosition(getX(), getY() - 1)) {
+                moveTo(getX(), getY() - 1);
+                return true;
+            } else {
+                moveTo(getX(), getY());
+                return false;
+            }
+            break;
+        case GraphObject::up:
+            if (isValidPosition(getX(), getY() + 1)) {
+                moveTo(getX(), getY() + 1);
+                return true;
+            } else {
+                moveTo(getX(), getY());
+                return false;
+            }
+            break;
+    }
+}
+
+// ---- END ACTOR METHODS
+
+
 // PROTESTER PEMTHODS
+
 /* constructs a new protester att their statrting location TODO
 Protester::Protester(StudentWorld *world) {
 
@@ -43,9 +105,11 @@ Person::Person(int imageID, int startX, int startY, GraphObject::Direction dir, 
 {};
 
 
+
+
 // DIRT METHODS
 // Create new dirt object with dirt image id, it's own x and y, facing right and depth of 3 and size 2.5
-Dirt::Dirt(int x, int y , StudentWorld* world) : Pickup(IID_DIRT,x,y,DIRT_DIR, DIRT_SIZE, DIRT_DEPTH, world) {
+Dirt::Dirt(int x, int y , StudentWorld* world) : Actor(IID_DIRT,x,y,DIRT_DIR, DIRT_SIZE, DIRT_DEPTH, world) {
     setVisible(true);
 }
 
@@ -65,14 +129,104 @@ Boulder::Boulder(StudentWorld *world, int x, int y) :
 }
 
 
+
 void Boulder::doSomething() {
     // do Nothing
 }
 
+// OIL BARREL METHODS
+OilBarrel::OilBarrel(StudentWorld *world, int x, int y) :
+    Pickup(IID_BARREL, x, y, OIL_BARREL_DIR, OIL_BARREL_SIZE, OIL_BARREL_DEPTH, world){
+    // TODO or nah
+    setVisible(true);
+}
+
+void OilBarrel::doSomething() {
+    // if the barrel isn't alive, return immediately
+    if (!isAlive()) return;
+    if (getWorld()->findNearbyFrackMan(this, 3)){
+        setDead();
+        // sound effect TODO
+        // add 1000 points TODO
+        // decrement requriedo il barrel count TODO
+    } else if (getWorld()->findNearbyFrackMan(this,4)){
+        setVisible(true); // troll
+        return;
+    }
+
+}
+
+// --- END OIL BARREL METHODS
+
+
+// SQUIRT METHODS
+
+Squirt::Squirt(StudentWorld *world, int x, int y, Direction dir) :
+    Actor(IID_WATER_SPURT, x, y, dir, SQUIRT_SIZE, SQUIRT_DEPTH, world), start_x(x), start_y(y){
+    setVisible(true);
+}
+
+void Squirt::doSomething() {
+    // move squirt 4 squares ahead of fracklegend
+    if (getWorld()->calculateRadius(start_x,start_y,getX(),getY()) < 5) {
+        moveForward();
+    } else {
+        setDead();
+    }
+}
+
+// ---- END SQUIRT METHODS
+
+
+// GOLD NUGGET METHODS
+
+void GoldNugget::doSomething() {
+
+}
+
+GoldNugget::GoldNugget(StudentWorld *world, int x, int y) :
+    Pickup(IID_GOLD, x, y, GOLD_NUGGET_DIR, GOLD_NUGGET_SIZE, GOLD_NUGGET_DEPTH, world){
+    // TODO or nah
+    setVisible(true);
+}
+
+// --- END GOLD NUGGET METHODS
+
+
+// SONAR KIT METHODS
+
+void SonarKit::doSomething() {
+
+}
+
+SonarKit::SonarKit(StudentWorld *world, int x, int y)
+    :Pickup(IID_SONAR, x,y,SONAR_KIT_DIR, SONAR_KIT_SIZE, SONAR_KIT_DEPTH, world){
+    setVisible(true);
+}
+
+//END SONAR KIT METHODS
+
+
+// WATER POOL METHODS
+void WaterPool::doSomething() {
+
+}
+
+WaterPool::WaterPool(StudentWorld *world, int x, int y):
+    Pickup(IID_WATER_POOL,x,y,WATER_POOL_DIR,WATER_POOL_SIZE,WATER_POOL_DEPTH,world){
+        setVisible(true);
+}
+
+
+
+// END WATER POOL METHODS
 // FRACKMAN METHODS
 FrackMan::FrackMan(StudentWorld *world) :
     Person(IID_PLAYER, PLAYER_START_X, PLAYER_START_Y, PLAYER_DIR, PLAYER_SIZE,PLAYER_DEPTH, world){
     setVisible(true);
+    setHitpoints(PLAYER_HITPOINTS);
+    addWater(5);
+    addSonar(1);
 }
 
 FrackMan::~FrackMan() {
@@ -81,7 +235,7 @@ FrackMan::~FrackMan() {
 
 // make sure that the postition of fackman is valid
 // TODO move to 'Person' class
-bool FrackMan::isValidPosition(int x, int y) {
+bool Actor::isValidPosition(int x, int y) {
     if (x < 61 && x >= 0) {
         if (y >= 0 && y < 61) {
            return true;
@@ -147,8 +301,12 @@ void FrackMan::doSomething() {
                 else
                     setDirection(GraphObject::up);
                 break;
-            case KEY_PRESS_ESCAPE:
-                //kill
+            case KEY_PRESS_SPACE:
+                if (getWater() > 0) {
+                    Squirt *squirt = new Squirt(getWorld(), getX(), getY(), dir);
+                    getWorld()->addActor(squirt);
+                    m_water--;
+                }
                 break;
         }
         // TODO only if player moved
@@ -162,4 +320,29 @@ void FrackMan::doSomething() {
 }
 
 
+void FrackMan::addSonar(int a=1) {
+    m_sonar += a;
+}
 
+void FrackMan::addGold(int a=1) {
+    m_gold+=a;
+}
+
+void FrackMan::addWater(int a=1) {
+    m_water+=a;
+}
+
+
+ int FrackMan::getGold() const {
+    return m_gold;
+}
+
+ int FrackMan::getSonar() const {
+    return m_sonar;
+}
+
+ int FrackMan::getWater() const {
+    return m_water;
+}
+
+// ---- END FRACKMAN METHODS

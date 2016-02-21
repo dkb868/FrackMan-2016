@@ -29,9 +29,18 @@ public:
 
 	bool deleteDirt(int x, int y);
 
-	float calculateRadius(int x1, int y1, int x2, int y2);
+	float calculateRadius(int x1, int y1, int x2, int y2) const;
 
 	bool isValidRadius(int x1, int y1, int x2, int y2);
+
+	// insert a new game objecgt at a valid location
+	void insertGameObject(int count, int xLower,int yLower,int xUpper,int yUpper);
+
+	void addActor(Actor* actor);
+
+	// If the FrackMan is within radius of a, return a pointer to the
+	// FrackMan, otherwise null.
+	Actor* findNearbyFrackMan(Actor* a, int radius) const;
 
 
 private:
@@ -43,6 +52,8 @@ private:
 	Dirt* m_dirt[64][64];
 	// store the boulder count for this level
 	int m_boulderCount;
+	int m_barrelCount;
+	int m_nuggetCount;
 };
 
 #endif // STUDENTWORLD_H_
