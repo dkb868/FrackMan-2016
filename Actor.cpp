@@ -6,6 +6,9 @@
 
 // Students:  Add code to this file (if you wish), Actor.h, StudentWorld.h, and StudentWorld.cpp
 // Intialzie
+
+// ACTOR METHODS
+
 Actor::Actor(int imageID, int startX, int startY, Direction dir, double size, unsigned int depth, StudentWorld* world) :
         GraphObject(imageID, startX, startY, dir, size, depth) {
     m_world = world;
@@ -15,12 +18,34 @@ Actor::~Actor(){
 
 }
 
+// PROTESTER PEMTHODS
+/* constructs a new protester att their statrting location TODO
+Protester::Protester(StudentWorld *world) {
+
+} */
+
+
 StudentWorld* Actor::getWorld() {
     return m_world;
 }
 
+// PICKUP METHODS
+// Cosntructor for Pickup
+Pickup::Pickup(int imageID, int startX, int startY, GraphObject::Direction dir, double size, unsigned int depth,
+               StudentWorld *world) : Actor(imageID, startX, startY, dir, size, depth, world)
+{};
+
+// PERSON METHODS
+
+// Cosntructor for Person
+Person::Person(int imageID, int startX, int startY, GraphObject::Direction dir, double size, unsigned int depth,
+               StudentWorld *world) : Actor(imageID, startX, startY, dir, size, depth, world)
+{};
+
+
+// DIRT METHODS
 // Create new dirt object with dirt image id, it's own x and y, facing right and depth of 3 and size 2.5
-Dirt::Dirt(int x, int y , StudentWorld* world) : Actor(IID_DIRT,x,y,DIRT_DIR, DIRT_SIZE, DIRT_DEPTH, world) {
+Dirt::Dirt(int x, int y , StudentWorld* world) : Pickup(IID_DIRT,x,y,DIRT_DIR, DIRT_SIZE, DIRT_DEPTH, world) {
     setVisible(true);
 }
 
@@ -31,8 +56,22 @@ void Dirt::doSomething(){
     return;
 }
 
+// BOULDER METHODS
+
+
+Boulder::Boulder(StudentWorld *world, int x, int y) :
+        Actor(IID_BOULDER, x, y, BOULDER_DIR, BOULDER_SIZE, BOULDER_DEPTH, world){
+    setVisible(true);
+}
+
+
+void Boulder::doSomething() {
+    // do Nothing
+}
+
+// FRACKMAN METHODS
 FrackMan::FrackMan(StudentWorld *world) :
-    Actor(IID_PLAYER, PLAYER_START_X, PLAYER_START_Y, PLAYER_DIR, PLAYER_SIZE,PLAYER_DEPTH, world){
+    Person(IID_PLAYER, PLAYER_START_X, PLAYER_START_Y, PLAYER_DIR, PLAYER_SIZE,PLAYER_DEPTH, world){
     setVisible(true);
 }
 
@@ -121,3 +160,6 @@ void FrackMan::doSomething() {
         }
     }
 }
+
+
+

@@ -4,7 +4,7 @@
 #include "GameWorld.h"
 #include "GameConstants.h"
 #include <string>
-#include <vector>
+#include <list>
 using namespace std;
 
 class Actor;
@@ -29,10 +29,20 @@ public:
 
 	bool deleteDirt(int x, int y);
 
+	float calculateRadius(int x1, int y1, int x2, int y2);
+
+	bool isValidRadius(int x1, int y1, int x2, int y2);
+
+
 private:
-	//list<Actor*> m_game_objects;
+	// variable used to keep track of all Actors except Dirt
+	list<Actor*> m_game_objects;
+	// This StudentWorld's FrackMan
 	FrackMan* m_frackMan;
+	// Array to store all the World's Dirt
 	Dirt* m_dirt[64][64];
+	// store the boulder count for this level
+	int m_boulderCount;
 };
 
 #endif // STUDENTWORLD_H_
