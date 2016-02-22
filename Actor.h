@@ -78,7 +78,7 @@ public:
     bool isAlive() const;
     // set the actor to dead
     void setDead();
-    void setHitpoints(int hp);
+    void reduceHitpoints(int hp);
 
 private:
     // store the Student World that the Actor belongs to.
@@ -128,7 +128,7 @@ private:
 class Pickup : public Actor{
 public:
     // Basic constructor for a Pickup
-    Pickup(int imageID, int startX, int startY, Direction dir, double size, unsigned int depth, StudentWorld* world);
+    Pickup(int imageID, int startX, int startY, Direction dir, double size, unsigned int depth, StudentWorld* world, int hitpoitns);
     virtual void doSomething() = 0;
 };
 
@@ -170,7 +170,7 @@ public:
 class Person : public Actor {
 public:
     // Basic constructor for a Pickup
-    Person(int imageID, int startX, int startY, Direction dir, double size, unsigned int depth, StudentWorld* world);
+    Person(int imageID, int startX, int startY, Direction dir, double size, unsigned int depth, StudentWorld* world, int hitpoints);
 
     virtual void doSomething() = 0;
 };

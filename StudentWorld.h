@@ -34,13 +34,16 @@ public:
 	bool isValidRadius(int x1, int y1, int x2, int y2);
 
 	// insert a new game objecgt at a valid location
-	void insertGameObject(int count, int xLower,int yLower,int xUpper,int yUpper);
+	template<class T> void insertGameObject(int count, int xLower,int yLower,int xUpper,int yUpper);
 
 	void addActor(Actor* actor);
 
 	// If the FrackMan is within radius of a, return a pointer to the
 	// FrackMan, otherwise null.
-	Actor* findNearbyFrackMan(Actor* a, int radius) const;
+	FrackMan* findNearbyFrackMan(Actor* a, int radius) const;
+
+	// return true if a 4x4 square of space is clear
+	bool isClear(int x, int y) const;
 
 
 private:
