@@ -26,6 +26,11 @@ const GraphObject::Direction BOULDER_DIR = GraphObject::down;
 const int BOULDER_DEPTH = 1;
 const double BOULDER_SIZE = 1.0;
 
+// used to check the state of the boulder
+const int BOULDER_STATE_STABLE = 1;
+const int BOULDER_STATE_WAITING = 2;
+const int BOULDER_STATE_FALLING = 3;
+
 // OIL BARREL CONSTANTS
 const GraphObject::Direction OIL_BARREL_DIR = GraphObject::right;
 const int OIL_BARREL_DEPTH = 2;
@@ -44,12 +49,27 @@ const float GOLD_NUGGET_SIZE = 1.0;
 const GraphObject::Direction SONAR_KIT_DIR = GraphObject::right;
 const int SONAR_KIT_DEPTH = 2;
 const float SONAR_KIT_SIZE = 1.0;
+const int SONAR_KTI_START_X = 0;
+const int SONAR_KIT_START_Y = 60;
 
 // WATER POOL CONSTANTS
 const GraphObject::Direction WATER_POOL_DIR = GraphObject::right;
 const int WATER_POOL_DEPTH = 2;
 const float WATER_POOL_SIZE = 1.0;
 
+// ALL PROTESTER CONSTANTS
+
+const int PROTESTER_START_X = 60;
+const int PROTESTER_START_Y = 60;
+const int PROTESTER_STATE_REST = 1;
+const int PROTESTER_STATE_LEAVING = 2;
+const int PROTESTER_STATE_ACTIVE = 3;
+
+// REGULAR PROTESTER CONSTANTS
+const GraphObject::Direction REGULAR_PROTESTER_DIR = GraphObject::left;
+const int REGULAR_PROTESTER_HITPOINTS = 5;
+const int REGULAR_PROTESTER_DEPTH = 0;
+const float REGULAR_PROTESTER_SIZE = 1.0;
 /*
  * Class for all Actors.
  * Actors extend GraphObject and are basically every object in the game that does something
@@ -72,13 +92,30 @@ public:
 
     // move something x steps forward
     bool moveForward();
+    bool canMoveForward(Direction dir);
     bool isValidPosition(int x, int y);
 
+    // Can other actors pass through this actor?
+    virtual bool canActorsPassThroughMe() const;
     // check if actor is alive
     bool isAlive() const;
     // set the actor to dead
     void setDead();
     void reduceHitpoints(int hp);
+    // Does this actor hunt the FrackMan?
+    virtual bool huntsFrackMan() const;
+
+    // Can this actor dig through dirt?
+    virtual bool canDigThroughDirt() const;
+
+    // Can this actor pick items up?
+    virtual bool canPickThingsUp() const;
+
+    // Can this actor need to be picked up to finish the level?
+    virtual bool needsToBePickedUpToFinishLevel() const;
+
+    // TODO delete function
+    int getHitpoints();
 
 private:
     // store the Student World that the Actor belongs to.
@@ -97,6 +134,7 @@ class Dirt : public Actor{
 public:
     Dirt(int x, int y, StudentWorld* world);
     ~Dirt();
+
     void doSomething();
 private:
 };
@@ -105,8 +143,14 @@ private:
 class Boulder : public Actor {
 public:
     Boulder(StudentWorld* world,int x, int y);
+    virtual bool canActorsPassThroughMe() const;
 
     virtual void doSomething();
+private:
+    // store the current state of the boulder
+    int m_state;
+    // store the amoutn of ticks left in the waiting state
+    int m_waitingTicks;
 };
 
 // Squirts are things that you shoot at protesters
@@ -151,7 +195,7 @@ public:
 // used to reveal shit
 class SonarKit : public Pickup {
 public:
-    SonarKit(StudentWorld* world, int x, int y);
+    SonarKit(StudentWorld* world);
 
     virtual void doSomething();
 };
@@ -169,7 +213,7 @@ public:
  */
 class Person : public Actor {
 public:
-    // Basic constructor for a Pickup
+    // Basic constructor for a Person
     Person(int imageID, int startX, int startY, Direction dir, double size, unsigned int depth, StudentWorld* world, int hitpoints);
 
     virtual void doSomething() = 0;
@@ -212,22 +256,67 @@ private:
  * A Protester is a bot
  * There are hardcore and regular protestors
  * They have almost everything in common except the way they seek the Frackman
- *
-class Protester : public Person {
+ * */
+class Protester : public Person
+{
 public:
-    // Basic constructor
-    Protester(StudentWorld* world);
-}; */
+    Protester(int imageID, Direction dir,
+              double size, unsigned int depth, StudentWorld* world, int hitpoints);
+    virtual bool annoy(unsigned int amount);
+    virtual void addGold();
+    virtual bool huntsFrackMan() const;
+
+    // Set number of ticks until next move
+    void setTicksToNextMove();
+
+    virtual void doSomething();
+    int getState();
+    void setState(int x);
+
+private:
+    int m_state;
+};
+
+class RegularProtester : public Protester
+{
+public:
+    RegularProtester(StudentWorld* world);
+    virtual void doSomething();
+    virtual void addGold();
+
+private:
+    int m_ticksToWaitBetweenMoves;
+    // amount of ticks remaning in rest state
+    int m_restTicks;
+    // num squares to move in the current direction before swithicng to a new direction
+    int m_numSquaresToMoveInCurrentDirection;
+    bool m_canShout;
+    int m_shoutTicks;
+
+};
+
+class HardcoreProtester : public Protester
+{
+public:
+    HardcoreProtester(int startX, int startY, StudentWorld* world, int hitpoints);
+    virtual void doSomething();
+    virtual void addGold();
+};
 
 
-// A position has an x and y value
+// A coordinate has an x and y value
 // the Euclidean Distance between two values can be calculated
 // you can check if two objects are within radius.
-class Position {
+class Coordinate {
 public:
-    Position(int x, int y);
+    Coordinate(int x, int y);
     // gets the euclidean distance between two positions
-    static float getDistance(Position pos1, Position pos2);
+    float getDistance(Coordinate coord);
+    int getX();
+    int getY();
+private:
+    int m_x;
+    int m_y;
 
 };
 

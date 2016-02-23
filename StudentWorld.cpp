@@ -1,8 +1,6 @@
 #include "StudentWorld.h"
 #include "Actor.h"
-#include <cstdlib>
-#include <cmath>
-#include <string>
+#include "vector"
 using namespace std;
 
 GameWorld* createStudentWorld(string assetDir)
@@ -39,8 +37,24 @@ int StudentWorld::init() {
 			bool validPositionFound = true;
 			// boulders must be between x=0 and x=60 inclusive
 			x = rand() % 61;
+
 			// also between y=20 and y=56 inclusive
 			y = rand() % 37 + 20;
+
+            // if x,y is in the middle shaft continue
+            // i.e if the 4x4 block fo x has an empty spot, continue
+            // TODO make this a function?
+            bool flag = false;
+            for (int k=0; k <= 3; k++){
+                for (int j=0; j <= 3; j++){
+                    if (m_dirt[x+k][y+j] == nullptr) {
+                        flag = true;
+                        break;
+                    }
+                }
+                if (flag) break;
+            }
+            if (flag) continue;
             // Anything that is nullptr belongs to the central hole so should be ignored
             if (m_dirt[x][y] == nullptr) continue;
 			// iterate game objects loop, check all positions
@@ -69,7 +83,8 @@ int StudentWorld::init() {
     insertGameObject<OilBarrel>(m_barrelCount,0,60,20,56);
     insertGameObject<GoldNugget>(m_nuggetCount,0,60,0,56);
 
-
+    // add a random protester
+    m_game_objects.push_back(new RegularProtester(this));
 	return GWSTATUS_CONTINUE_GAME;
 }
 
@@ -84,7 +99,20 @@ void StudentWorld::insertGameObject(int count, int xLower, int xUpper, int yLowe
             x = rand() % (xUpper+1 - xLower) + xLower;
             // also between y=20 and y=56 inclusive
             y = rand() % (yUpper+1 - yLower) + yLower;
+            // TODO make this a function?
+            bool flag = false;
+            for (int k=0; k <= 3; k++){
+                for (int j=0; j <= 3; j++){
+                    if (m_dirt[x+k][y+j] == nullptr) {
+                        flag = true;
+                        break;
+                    }
+                }
+                if (flag) break;
+            }
+            if (flag) continue;
             // Anything that is nullptr belongs to the central hole so should be ignored TODO only valid if used in intialzization not during game
+            // ensure that there is dirt where the object is being places since the barrels and ngugest must be in dirt
             if (m_dirt[x][y] == nullptr) continue;
             // iterate game objects loop, check all positions
             for (std::list<Actor*>::iterator curr_actor = m_game_objects.begin(); curr_actor != m_game_objects.end(); ++curr_actor){
@@ -131,22 +159,33 @@ int StudentWorld::move()
     // TODO actual probabuility algorithm
     // make a new goodie, either water or sonar if certain probability
     // TODO sonar
-    if (rand() % 50 == 1){
-		// TODO put in different locations, i.e actually be random
-        for(int i=0;i<64;i++){
-            // flag used to break out of outer loop
-            bool flag = false;
-            for(int j=0;j<64;j++){
-                if (isClear(i,j)){
-                    m_game_objects.push_back(new WaterPool(this,i,j));
-                    flag = true;
-                    break;
+    // int probabilityOfGoodie = getLevel() * 25 + 300;
+    int probabilityOfGoodie = 20; // TODO above
+    // TODO or +1?
+    if (rand() % probabilityOfGoodie == 1){
+        // 1/5 probaility of sonar kit
+        if(rand() % 5 ==1){
+            // All sonar Kits must be added at x=0, y=60
+            m_game_objects.push_back(new SonarKit(this));
+        } else {
+            vector<Coordinate*> potentialCoordiantes;
+            // TODO put in different locations, i.e actually be random
+            for(int i=0;i<64;i++){
+                for(int j=0;j<64;j++){
+                    if (isClear(i,4,j,4)){
+                        potentialCoordiantes.push_back(new Coordinate(i,j));
+                    }
                 }
             }
-            if (flag) break;
+            // pick random coord from the vector
+            long randIndex = rand() % potentialCoordiantes.size();
+            Coordinate choosenCoordiante = *potentialCoordiantes[randIndex];
+            m_game_objects.push_back(new WaterPool(this,choosenCoordiante.getX(),choosenCoordiante.getY()));
+            for (int i=0;i<potentialCoordiantes.size();i++){
+                delete potentialCoordiantes[i];
+            }
         }
-        // All sonar Kits must be added at x=0, y=60
-		m_game_objects.push_back(new SonarKit(this,0,60));
+
 
 	}
 	// This code is here merely to allow the game to build, run, and terminate after you hit enter a few times.
@@ -225,7 +264,7 @@ float StudentWorld::calculateRadius(int x1, int y1, int x2, int y2) const{
 
 // check if the radius si valid
 // since no objects can be within 6 squares of any other object
-bool StudentWorld::isValidRadius(int x1, int y1, int x2, int y2) {
+bool StudentWorld::isValidRadius(int x1, int y1, int x2, int y2) const{
 	return sqrt(pow(x2-x1, 2) + pow(y2-y1, 2)) > 6.0;
 }
 
@@ -237,13 +276,208 @@ FrackMan* StudentWorld::findNearbyFrackMan(Actor *a, int radius) const {
 }
 
 // check if 4x4 block is clear
-bool StudentWorld::isClear(int x,int y) const{
-    for (int k=0; k <= 3; k++){
-        for (int j=0; j <= 3; j++){
+bool StudentWorld::isClear(int x,int xRange, int y, int yRange) const{
+    for (int k=0; k <= xRange-1; k++){
+        for (int j=0; j <= yRange-1; j++){
             if (m_dirt[x+k][y+j] != nullptr) {
                 return false;
             }
         }
     }
     return true;
+}
+
+bool StudentWorld::canActorMoveTo(Actor *a, int x, int y) const {
+    // if the spot is empty, return true, else false.
+    // if the position is invalid return false immediately,
+    // TODO copypasta fro mactor
+    if (x >= 61 || x< 0) {
+        if (y < 0 || y >= 61) {
+            return false;
+        }
+    }
+    // iterate game objects loop, check to see if any are at that spot that can't be passed through
+    for (std::list<Actor*>::const_iterator curr_actor = m_game_objects.begin(); curr_actor != m_game_objects.end(); ++curr_actor) {
+        // if the actor is at that location and cannot be passed through, return false
+        // double for loops added to check the 4x4 block
+        for (int k = 0; k <= 3; k++) {
+            for (int j = 0; j <= 3; j++) {
+                if (!(*curr_actor)->canActorsPassThroughMe()) {
+                    if ((*curr_actor)->getX() + k == x && (*curr_actor)->getY() + j == y) {
+                        return false;
+                    }
+                } else{
+                    break;
+                }
+            }
+        }
+    }
+
+
+    // if actor is protester
+    if (a->huntsFrackMan()){
+        return isClear(x,4,y,4);
+    }
+
+    // if actor is a boulder
+    if(!a->canActorsPassThroughMe())
+        // check for dirt, only valid for boulderse
+        return isClear(x, 4, y, 1);
+
+    return true;
+}
+
+// TODO maybe use lineOfSightToFrackman
+bool StudentWorld::facingTowardFrackMan(Actor *a) const {
+    int x = a->getX();
+    int y = a->getY();
+    switch (a->getDirection()) {
+        case GraphObject::left:
+            // if you're facing left, go left
+            while(a->isValidPosition(x,y)){
+                // if frackman is found, then you are facing it
+                if(m_frackMan->getX()==x & m_frackMan->getY()==y){
+                    return true;
+                } // otherwise keep decrementing x to go left
+                else {
+                    x--;
+                }
+            }
+            break;
+        case GraphObject::right:
+            // if you're facing right, go right
+            while(a->isValidPosition(x,y)){
+                // if frackman is found, then you are facing it
+                if(m_frackMan->getX()==x & m_frackMan->getY()==y){
+                    return true;
+                } // otherwise keep incrementing x to go right
+                else {
+                    x++;
+                }
+            }
+            break;
+        case GraphObject::down:
+            // if you're facing down, go down
+            while(a->isValidPosition(x,y)){
+                // if frackman is found, then you are facing it
+                if(m_frackMan->getX()==x & m_frackMan->getY()==y){
+                    return true;
+                } // otherwise keep decrementing y to go down
+                else {
+                    y--;
+                }
+            }
+            break;
+
+        case GraphObject::up:
+            // if you're facing up, go up
+            while(a->isValidPosition(x,y)){
+                // if frackman is found, then you are facing it
+                if(m_frackMan->getX()==x & m_frackMan->getY()==y){
+                    return true;
+                } // otherwise keep incrementing y to go up
+                else {
+                    y++;
+                }
+            }
+            break;
+    }
+}
+
+GraphObject::Direction StudentWorld::lineOfSightToFrackMan(Actor *a) const {
+    int actor_x = a->getX();
+    int actor_y = a->getY();
+    // if the x values are equal there is either a lien of sight up or down
+    // TODO fix the fact thatits a 4x4 square or nah
+    if (m_frackMan->getX() == actor_x){
+        if (m_frackMan->getY() < actor_y){
+            return GraphObject::down;
+        } else {
+            // TODO what if equal?
+            return GraphObject::up;
+        }
+    }
+    // if the y values are equal, there is either a line of sight right or left
+    else if (m_frackMan->getY() == actor_y){
+        if(m_frackMan->getX() < actor_x){
+            return GraphObject::left;
+        } else {
+            // TODO same
+            return GraphObject::right;
+        }
+    } else {
+        return GraphObject::none;
+    }
+}
+
+bool StudentWorld::clearPathForwardToFrackman(Actor *a, GraphObject::Direction dir) const {
+    int x = a->getX();
+    int y = a->getY();
+    switch (dir) {
+        case GraphObject::left:
+            // if you're facing left, go left
+            while(a->isValidPosition(x,y)){
+                // if that spot has dirt or boulder there is no clear path
+                if (m_dirt[x][y] != nullptr || !canActorMoveTo(a,x,y)) {
+                    return false;
+                }
+                    // if frackman is found there is a clear path
+                if (m_frackMan->getX()==x & m_frackMan->getY()==y){
+                    return true;
+                } // otherwise keep decrementing x to go left
+                else {
+                    x--;
+                }
+            }
+            break;
+        case GraphObject::right:
+            // if you're facing right, go right
+            while(a->isValidPosition(x,y)){
+                // if that spot has dirt or boulder there is no clear path
+                if (m_dirt[x][y] != nullptr || !canActorMoveTo(a,x,y)) {
+                    return false;
+                }
+                // if frackman is found there is a clear path
+                if(m_frackMan->getX()==x & m_frackMan->getY()==y){
+                    return true;
+                } // otherwise keep incrementing x to go right
+                else {
+                    x++;
+                }
+            }
+            break;
+        case GraphObject::down:
+            // if you're facing down, go down
+            while(a->isValidPosition(x,y)){
+                // if that spot has dirt or boulder there is no clear path
+                if (m_dirt[x][y] != nullptr || !canActorMoveTo(a,x,y)) {
+                    return false;
+                }
+                // if frackman is found there is a clear path
+                if(m_frackMan->getX()==x & m_frackMan->getY()==y){
+                    return true;
+                } // otherwise keep decrementing y to go down
+                else {
+                    y--;
+                }
+            }
+            break;
+
+        case GraphObject::up:
+            // if you're facing up, go up
+            while(a->isValidPosition(x,y)){
+                // if that spot has dirt or boulder there is no clear path
+                if (m_dirt[x][y] != nullptr || !canActorMoveTo(a,x,y)) {
+                    return false;
+                }
+                // if frackman is found there is a clear path
+                if(m_frackMan->getX()==x & m_frackMan->getY()==y){
+                    return true;
+                } // otherwise keep incrementing y to go up
+                else {
+                    y++;
+                }
+            }
+            break;
+    }
 }

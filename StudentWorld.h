@@ -3,6 +3,7 @@
 
 #include "GameWorld.h"
 #include "GameConstants.h"
+#include "GraphObject.h"
 #include <string>
 #include <list>
 using namespace std;
@@ -31,7 +32,10 @@ public:
 
 	float calculateRadius(int x1, int y1, int x2, int y2) const;
 
-	bool isValidRadius(int x1, int y1, int x2, int y2);
+	bool isValidRadius(int x1, int y1, int x2, int y2) const;
+
+    // Check if Actor can move to x,y
+    bool canActorMoveTo(Actor* a, int x, int y) const;
 
 	// insert a new game objecgt at a valid location
 	template<class T> void insertGameObject(int count, int xLower,int yLower,int xUpper,int yUpper);
@@ -42,8 +46,17 @@ public:
 	// FrackMan, otherwise null.
 	FrackMan* findNearbyFrackMan(Actor* a, int radius) const;
 
-	// return true if a 4x4 square of space is clear
-	bool isClear(int x, int y) const;
+	// return true if a xRange x yRange square is clear
+	bool isClear(int x,int xRange, int y, int yRange) const;
+
+    // Is the Actor a facing toward the FrackMan?
+    bool facingTowardFrackMan(Actor* a) const;
+
+    // If the Actor a has a clear line of sight to the FrackMan, return
+    // the direction to the FrackMan, otherwise GraphObject::none.
+    GraphObject::Direction lineOfSightToFrackMan(Actor* a) const;
+
+    bool clearPathForwardToFrackman(Actor* a, GraphObject::Direction dir) const;
 
 
 private:
