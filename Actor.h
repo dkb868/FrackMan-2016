@@ -30,6 +30,8 @@ const double BOULDER_SIZE = 1.0;
 const int BOULDER_STATE_STABLE = 1;
 const int BOULDER_STATE_WAITING = 2;
 const int BOULDER_STATE_FALLING = 3;
+const int BOULDER_ANNOY_RADIUS = 3;
+const int BOULDER_ANNOY_POINTS = 100;
 
 // OIL BARREL CONSTANTS
 const GraphObject::Direction OIL_BARREL_DIR = GraphObject::right;
@@ -51,11 +53,13 @@ const int SONAR_KIT_DEPTH = 2;
 const float SONAR_KIT_SIZE = 1.0;
 const int SONAR_KTI_START_X = 0;
 const int SONAR_KIT_START_Y = 60;
+const int SONAR_KIT_HITPOINTS = 10;
 
 // WATER POOL CONSTANTS
 const GraphObject::Direction WATER_POOL_DIR = GraphObject::right;
 const int WATER_POOL_DEPTH = 2;
 const float WATER_POOL_SIZE = 1.0;
+const int WATER_POOL_HITPOINTS = 100;
 
 // ALL PROTESTER CONSTANTS
 
@@ -113,6 +117,9 @@ public:
 
     // Can this actor need to be picked up to finish the level?
     virtual bool needsToBePickedUpToFinishLevel() const;
+
+    // Annoy this actor.
+    virtual bool annoy(int amt);
 
     // TODO delete function
     int getHitpoints();
@@ -215,7 +222,7 @@ class Person : public Actor {
 public:
     // Basic constructor for a Person
     Person(int imageID, int startX, int startY, Direction dir, double size, unsigned int depth, StudentWorld* world, int hitpoints);
-
+    bool annoy(int amt);
     virtual void doSomething() = 0;
 };
 
@@ -292,6 +299,8 @@ private:
     int m_numSquaresToMoveInCurrentDirection;
     bool m_canShout;
     int m_shoutTicks;
+    // for perpendicular turns
+    int m_turnTicks;
 
 };
 

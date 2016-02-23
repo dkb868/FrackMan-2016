@@ -6,11 +6,13 @@
 #include "GraphObject.h"
 #include <string>
 #include <list>
+#include <vector>
 using namespace std;
 
 class Actor;
 class FrackMan;
 class Dirt;
+class Coordinate;
 
 // Students:  Add code to this file, StudentWorld.cpp, Actor.h, and Actor.cpp
 
@@ -34,6 +36,9 @@ public:
 
 	bool isValidRadius(int x1, int y1, int x2, int y2) const;
 
+    // are two actors within some radius
+    bool isWithinRadius(Actor* a1, Actor* a2, int radius) const;
+
     // Check if Actor can move to x,y
     bool canActorMoveTo(Actor* a, int x, int y) const;
 
@@ -56,9 +61,18 @@ public:
     // the direction to the FrackMan, otherwise GraphObject::none.
     GraphObject::Direction lineOfSightToFrackMan(Actor* a) const;
 
+    // Reveal all objects within radius of x,y.
+    void revealAllNearbyObjects(int x, int y, int radius);
+
+    // Annoy all other actors within radius of annoyer, returning the
+    // number of actors annoyed.
+    int annoyAllNearbyActors(Actor* annoyer, int points, int radius);
+
+    void killFrackman();
+
     bool clearPathForwardToFrackman(Actor* a, GraphObject::Direction dir) const;
 
-
+    vector<Coordinate*> findAllCoordinatesWithinRadius(int x,int y,int radius);
 private:
 	// variable used to keep track of all Actors except Dirt
 	list<Actor*> m_game_objects;

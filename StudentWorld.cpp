@@ -115,8 +115,9 @@ void StudentWorld::insertGameObject(int count, int xLower, int xUpper, int yLowe
             // ensure that there is dirt where the object is being places since the barrels and ngugest must be in dirt
             if (m_dirt[x][y] == nullptr) continue;
             // iterate game objects loop, check all positions
-            for (std::list<Actor*>::iterator curr_actor = m_game_objects.begin(); curr_actor != m_game_objects.end(); ++curr_actor){
-                if (!isValidRadius(x,y, (*curr_actor)->getX(), (*curr_actor)->getY())){
+           // for (std::list<Actor*>::iterator curr_actor = m_game_objects.begin(); curr_actor != m_game_objects.end(); ++curr_actor){
+               for (Actor* curr_actor : m_game_objects){
+                if (!isValidRadius(x,y, (curr_actor)->getX(), (curr_actor)->getY())){
                     validPositionFound = false;
                 }
             }
@@ -138,6 +139,10 @@ void StudentWorld::insertGameObject(int count, int xLower, int xUpper, int yLowe
 
 int StudentWorld::move()
 {
+    // if frackman is dead, immediately restart the level
+    if (!m_frackMan->isAlive()){
+        return GWSTATUS_PLAYER_DIED;
+    }
 	m_frackMan->doSomething();
     // Clean up all dead objects
 	for (std::list<Actor*>::iterator curr_actor = m_game_objects.begin(); curr_actor != m_game_objects.end();){
@@ -155,6 +160,7 @@ int StudentWorld::move()
             ++curr_actor;
         }
 	}
+
 
     // TODO actual probabuility algorithm
     // make a new goodie, either water or sonar if certain probability
@@ -209,8 +215,16 @@ void StudentWorld::cleanUp(){
 		}
 	}
 	// TODO delete boulders
-	// free entire list
-	m_game_objects.clear();
+    // delete all game objects
+    for (std::list<Actor*>::iterator curr_actor = m_game_objects.begin(); curr_actor != m_game_objects.end();){
+        // If the thing is dead
+        // get the currrent actor to be deleted
+        Actor* temp = *curr_actor;
+        // erase actor from list
+        curr_actor = m_game_objects.erase(curr_actor);
+        // delete actor
+        delete temp;
+    }
 
 }
 
@@ -480,4 +494,65 @@ bool StudentWorld::clearPathForwardToFrackman(Actor *a, GraphObject::Direction d
             }
             break;
     }
+}
+
+void StudentWorld::revealAllNearbyObjects(int x, int y, int radius) {
+    // for every actor
+    for (Actor* actor : m_game_objects) {
+        // check every coordinate nearby
+        for (Coordinate *coord : findAllCoordinatesWithinRadius(x, y, radius)) {
+            if(actor->getX() == coord->getX() && actor->getY() == coord->getY()){
+                // if the actor at that coordinate is invisble, make it visible
+                if(!actor->isVisible()){
+                    actor->setVisible(true);
+                }
+            }
+        }
+    }
+}
+
+int StudentWorld::annoyAllNearbyActors(Actor *annoyer, int points, int radius) {
+    // store the count
+    int count = 0;
+    // coordinates within radius
+    // for every actor
+    for (Actor* actor : m_game_objects) {
+            if(isWithinRadius(actor,annoyer,radius)){
+                // if the actor at that coordinate is annoyable, annoy it and increment cuont
+                if(actor->annoy(points)){
+                    count++;
+                }
+            }
+    }
+
+    // check the frackman, who is only annoyed by the boulder
+    // so if it is a boulder then check
+    if (!annoyer->canActorsPassThroughMe()) {
+        if (isWithinRadius(m_frackMan, annoyer, radius)) {
+            m_frackMan->annoy(points);
+            count++;
+        }
+    }
+
+    return count;
+}
+
+vector<Coordinate*> StudentWorld::findAllCoordinatesWithinRadius(int x, int y, int radius) {
+    std::vector<Coordinate*> withinRadius;
+    for (int k=0; k <= radius-1; k++){
+        for (int j=0; j <= radius-1; j++){
+            withinRadius.push_back(new Coordinate(x+k,y+j));
+        }
+    }
+    return withinRadius;
+}
+
+
+// TODO delete since this was made to test annoy
+void StudentWorld::killFrackman() {
+    m_frackMan->annoy(999);
+}
+
+bool StudentWorld::isWithinRadius(Actor *a1, Actor *a2, int radius) const {
+    return (calculateRadius(a1->getX(),a1->getY(),a2->getX(),a2->getY()) <= radius);
 }

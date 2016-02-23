@@ -37,12 +37,17 @@ bool Actor::huntsFrackMan() const {
 }
 
 bool Actor::isAlive() const {
-    // 0 hitpoints = false, anythign else is true
-    return m_hitpoints != 0;
+    // > 0 hitpoints = true, anythign else is false
+    return m_hitpoints > 0;
 }
 
 int Actor::getHitpoints() {
     return m_hitpoints;
+}
+
+
+bool Actor::annoy(int amt) {
+   return false;
 }
 
 void Actor::setDead() {
@@ -166,11 +171,19 @@ Pickup::Pickup(int imageID, int startX, int startY, GraphObject::Direction dir, 
 
 // PERSON METHODS
 
+// People can be anoyed, reducing their hitpoints
+bool Person::annoy(int amt) {
+    reduceHitpoints(amt);
+    return true;
+}
+
 // Cosntructor for Person
 Person::Person(int imageID, int startX, int startY, GraphObject::Direction dir, double size, unsigned int depth,
                StudentWorld *world, int hitpoints) : Actor(imageID, startX, startY, dir, size, depth, world, hitpoints)
 {};
 
+
+// END PERSON METHODS
 
 
 
@@ -230,7 +243,8 @@ void Boulder::doSomething() {
             else if (!(getWorld()->canActorMoveTo(this, getX(),getY()-1))){
                 setDead();
             }
-            // TODO else if in radius of prtestor, annoy
+            //else if in radius of prtestor, annoy
+            getWorld()->annoyAllNearbyActors(this,BOULDER_ANNOY_POINTS,BOULDER_ANNOY_RADIUS);
 
             break;
     }
@@ -270,9 +284,18 @@ Squirt::Squirt(StudentWorld *world, int x, int y, Direction dir) :
 }
 
 void Squirt::doSomething() {
+    // if its dead do nothing
+    if(!isAlive()) return;
     // move squirt 4 squares ahead of fracklegend
     if (getWorld()->calculateRadius(start_x,start_y,getX(),getY()) < 5) {
+        // TODO immovable terrain boudler and dirt, mustk ill squirt
         moveForward();
+        // if within radius of 3 of protesters
+        // if something gets annoyed
+        if (getWorld()->annoyAllNearbyActors(this,2,3) > 0){
+            // the squirt dies
+            setDead();
+        }
     } else {
         setDead();
     }
@@ -305,7 +328,7 @@ void GoldNugget::doSomething() {
 GoldNugget::GoldNugget(StudentWorld *world, int x, int y) :
     Pickup(IID_GOLD, x, y, GOLD_NUGGET_DIR, GOLD_NUGGET_SIZE, GOLD_NUGGET_DEPTH, world){
     // TODO or nah
-    setVisible(true);
+    setVisible(false);
 }
 
 // --- END GOLD NUGGET METHODS
@@ -330,7 +353,7 @@ void SonarKit::doSomething() {
 
 SonarKit::SonarKit(StudentWorld *world)
 // TODO change arbitrary lifetime of 10 ticks
-    :Pickup(IID_SONAR, SONAR_KTI_START_X,SONAR_KIT_START_Y,SONAR_KIT_DIR, SONAR_KIT_SIZE, SONAR_KIT_DEPTH, world, 10){
+    :Pickup(IID_SONAR, SONAR_KTI_START_X,SONAR_KIT_START_Y,SONAR_KIT_DIR, SONAR_KIT_SIZE, SONAR_KIT_DEPTH, world, SONAR_KIT_HITPOINTS){
     setVisible(true);
 }
 
@@ -347,7 +370,6 @@ void WaterPool::doSomething() {
         // the water pool is dead so it may be removed
         setDead();
         // TODO hacked, fix this bug
-        setVisible(false);
         // sound effect TODO
         // add 100 points TODO
         // frackman gets 5 new squits of water
@@ -360,7 +382,7 @@ void WaterPool::doSomething() {
 
 WaterPool::WaterPool(StudentWorld *world, int x, int y):
 // TODO randomly assigned to last 10 ticks so use actual algorithm
-    Pickup(IID_WATER_POOL,x,y,WATER_POOL_DIR,WATER_POOL_SIZE,WATER_POOL_DEPTH,world,10){
+    Pickup(IID_WATER_POOL,x,y,WATER_POOL_DIR,WATER_POOL_SIZE,WATER_POOL_DEPTH,world,WATER_POOL_HITPOINTS){
         setVisible(true);
 
 }
@@ -425,6 +447,7 @@ RegularProtester::RegularProtester( StudentWorld* world) :
     m_canShout = true;
     // non resting ticks
     m_shoutTicks = 15;
+    m_turnTicks = 0;
 }
 
 
@@ -449,6 +472,7 @@ void RegularProtester::doSomething() {
             // else move closer to exit
             break;
         case PROTESTER_STATE_ACTIVE:
+            if(m_turnTicks>0) m_turnTicks--;
             if (!m_canShout) {
                 m_shoutTicks--;
             }
@@ -513,16 +537,40 @@ void RegularProtester::doSomething() {
                 m_numSquaresToMoveInCurrentDirection = rand()%53 + 8; // TODO make sure legit
                 // pick new value for numSquarestoMoveincurrentDirection between 8 and 60
                 // go to step 8 TODO
+            } else {
+                // otherwise if protester is sitting at intersection where it could turn and move in perp
+
+                // direction eg facing left and can go up or down
+                // has not made perpendicular turn in last 200 no resting ticks.
+                // detrmine which of two directiosn are viable
+                // pick one randomly
+                // set direction to new direction
+                // pick new numsquarestoMvoeValue
+                // goto step 8
+
+                // get direction
+                // if protester hasn't made perpendicular turn in the last 200 non-resting ticks
+                if (m_turnTicks == 0) {
+                    m_turnTicks = 200;
+                    switch (getDirection()) {
+                        case up:
+                        case down:
+                            // if we can move left and right, we are at an intersectioN!
+                            if (canMoveForward(left) && canMoveForward(right)) {
+                                // randomly select a direction
+                                rand() % 2 ? setDirection(left) : setDirection(right);
+                            }
+                            break;
+                        case left:
+                        case right:
+                            if (canMoveForward(up) && canMoveForward(down)) {
+                                rand() % 2 ? setDirection(up) : setDirection(down);
+                            }
+                    }
+                }
             }
 
-            // otherwise if protester is sitting at intersection where it could turn and move in perp
-            // direction eg facing left and can go up or down
-            // has not made perpendicular turn in last 200 no resting ticks.
-            // detrmine which of two directiosn are viable
-            // pick one randomly
-            // set direction to new direction
-            // pick new numsquarestoMvoeValue
-            // goto step 8
+
 
             // step 8
             // FINALLY FUCKING make a move one step in its currently facing direction
@@ -546,8 +594,9 @@ void RegularProtester::addGold() {
 FrackMan::FrackMan(StudentWorld *world) :
     Person(IID_PLAYER, PLAYER_START_X, PLAYER_START_Y, PLAYER_DIR, PLAYER_SIZE,PLAYER_DEPTH, world, PLAYER_HITPOINTS){
     setVisible(true);
-    addWater(5);
-    addSonar(1);
+    addWater(PLAYER_START_WATER);
+    addSonar(PLAYER_START_SONAR);
+    addGold(PLAYER_START_NUGGETS);
 }
 
 FrackMan::~FrackMan() {
@@ -637,11 +686,13 @@ void FrackMan::doSomething() {
                 }
                 break;
             case KEY_PRESS_ESCAPE:
+                getWorld()->killFrackman();
                 break;
             case 'z':
             case 'Z':
                 if (getSonar() > 0){
-                    // make shit visible TODO
+                    getWorld()->revealAllNearbyObjects(getX(),getY(),20);
+                    m_sonar--;
                 }
                 break;
 
