@@ -7,12 +7,13 @@
 #include <string>
 #include <list>
 #include <vector>
-using namespace std;
 
 class Actor;
 class FrackMan;
 class Dirt;
 class Coordinate;
+
+
 
 // Students:  Add code to this file, StudentWorld.cpp, Actor.h, and Actor.cpp
 
@@ -70,12 +71,17 @@ public:
 
     void killFrackman();
 
-    bool clearPathForwardToFrackman(Actor* a, GraphObject::Direction dir) const;
+    bool isClearPathForwardToFrackman(Actor *a, GraphObject::Direction dir) const;
 
-    vector<Coordinate*> findAllCoordinatesWithinRadius(int x,int y,int radius);
+    std::vector<Coordinate*> findAllCoordinatesWithinRadius(int x,int y,int radius);
+
+
+    // populate the distanceMap, mapping each Coordinate to the amount of steps to the endpoint
+    // from that coordinate
+    void populateDistanceMap();
 private:
 	// variable used to keep track of all Actors except Dirt
-	list<Actor*> m_game_objects;
+	std::list<Actor*> m_game_objects;
 	// This StudentWorld's FrackMan
 	FrackMan* m_frackMan;
 	// Array to store all the World's Dirt
@@ -84,6 +90,12 @@ private:
 	int m_boulderCount;
 	int m_barrelCount;
 	int m_nuggetCount;
+    // structure to make navigation very efficient.
+    // stores the distance to a certain location from every coordinate
+    std::map<Coordinate, float> distanceMap;
+
 };
+
+
 
 #endif // STUDENTWORLD_H_

@@ -1,6 +1,7 @@
 #include "StudentWorld.h"
 #include "Actor.h"
-#include "vector"
+#include <vector>
+#include <queue>
 using namespace std;
 
 GameWorld* createStudentWorld(string assetDir)
@@ -144,6 +145,8 @@ int StudentWorld::move()
         return GWSTATUS_PLAYER_DIED;
     }
 	m_frackMan->doSomething();
+    // check if all oil barrels were picked up
+    bool allOilPickedUp = true;
     // Clean up all dead objects
 	for (std::list<Actor*>::iterator curr_actor = m_game_objects.begin(); curr_actor != m_game_objects.end();){
         // If the thing is dead
@@ -157,9 +160,19 @@ int StudentWorld::move()
 
         } else {
             (*curr_actor)->doSomething();
+            // if there is still oil on the field, all the oil has not been picked up
+            if ((*curr_actor)->needsToBePickedUpToFinishLevel()){
+                allOilPickedUp = false;
+            }
+
             ++curr_actor;
         }
 	}
+    // if all the oil was picked up, the level is won
+    if (allOilPickedUp){
+        // make sound
+        return GWSTATUS_FINISHED_LEVEL;
+    }
 
 
     // TODO actual probabuility algorithm
@@ -424,7 +437,7 @@ GraphObject::Direction StudentWorld::lineOfSightToFrackMan(Actor *a) const {
     }
 }
 
-bool StudentWorld::clearPathForwardToFrackman(Actor *a, GraphObject::Direction dir) const {
+bool StudentWorld::isClearPathForwardToFrackman(Actor *a, GraphObject::Direction dir) const {
     int x = a->getX();
     int y = a->getY();
     switch (dir) {
@@ -499,6 +512,7 @@ bool StudentWorld::clearPathForwardToFrackman(Actor *a, GraphObject::Direction d
 void StudentWorld::revealAllNearbyObjects(int x, int y, int radius) {
     // for every actor
     for (Actor* actor : m_game_objects) {
+
         // check every coordinate nearby
         for (Coordinate *coord : findAllCoordinatesWithinRadius(x, y, radius)) {
             if(actor->getX() == coord->getX() && actor->getY() == coord->getY()){
@@ -516,18 +530,22 @@ int StudentWorld::annoyAllNearbyActors(Actor *annoyer, int points, int radius) {
     int count = 0;
     // coordinates within radius
     // for every actor
-    for (Actor* actor : m_game_objects) {
-            if(isWithinRadius(actor,annoyer,radius)){
+    // only look for protesters to annoy if the annoyer is not a protester
+    // because they can't annoy themselves
+    if(!annoyer->huntsFrackMan()) {
+        for (Actor *actor : m_game_objects) {
+            if (isWithinRadius(actor, annoyer, radius)) {
                 // if the actor at that coordinate is annoyable, annoy it and increment cuont
-                if(actor->annoy(points)){
+                if (actor->annoy(points)) {
                     count++;
                 }
             }
+        }
     }
 
-    // check the frackman, who is only annoyed by the boulder
+    // check the frackman, who is only annoyed by the boulder and protesters
     // so if it is a boulder then check
-    if (!annoyer->canActorsPassThroughMe()) {
+    if (!annoyer->canActorsPassThroughMe() || annoyer->huntsFrackMan()) {
         if (isWithinRadius(m_frackMan, annoyer, radius)) {
             m_frackMan->annoy(points);
             count++;
@@ -555,4 +573,69 @@ void StudentWorld::killFrackman() {
 
 bool StudentWorld::isWithinRadius(Actor *a1, Actor *a2, int radius) const {
     return (calculateRadius(a1->getX(),a1->getY(),a2->getX(),a2->getY()) <= radius);
+}
+
+
+void StudentWorld::populateDistanceMap() {
+    queue<Coordinate> coordQueue;
+    // boolean array to keep track of whichc locations can be moved to
+    bool m_validLocations[64][64];
+    coordQueue.push(Coordinate(60,60)); // put the starting poitn (AKA the protester end point)
+    // mark starting location as encountered
+    m_validLocations[60][60] = false;
+    for (int i=0;i<64;i++){
+        for(int j=0;j<64;j++){
+            // if its nto nullptr there is no dirt
+            if (m_dirt[i][j] != nullptr){
+                m_validLocations[i][j] = true;
+            } else {
+                m_validLocations[i][j] = false;
+            }
+        }
+    }
+
+    // all the boulders are also unpassable
+    // find all of them and update validLocations
+    for (Actor* actor : m_game_objects){
+        if(!actor->canActorsPassThroughMe()){
+            m_validLocations[actor->getX()][actor->getY()] = false;
+        }
+    }
+
+    // begin exploring
+
+    while(!coordQueue.empty()){
+        Coordinate curr = coordQueue.front(); // get current location being explored
+        // add this location to the map and store its distance from the end (which is the start 60 60)
+        distanceMap.insert(std::pair<Coordinate, float>(curr,calculateRadius(curr.getX(),curr.getY(),60,60)));
+        coordQueue.pop();
+
+        // check all the directions
+        // first check LEFT
+        // if we can move left and haven't been to taht cell yet
+        if (m_validLocations[curr.getX()-1][curr.getY()]){
+            coordQueue.push(Coordinate(curr.getX()-1, curr.getY()));
+            // mark as explored
+            m_validLocations[curr.getX()-1][curr.getY()] = false;
+        }
+        // if we can move RIGHT and havent' been to that cell yet, check there
+        if (m_validLocations[curr.getX() +1][curr.getY()]){
+            coordQueue.push(Coordinate(curr.getX()+1,curr.getY()));
+            // mark as explored
+            m_validLocations[curr.getX()+1][curr.getY()] = false;
+        }
+        // if we can move DOWN and havent' been to that cell yet, check there
+        if (m_validLocations[curr.getX()][curr.getY()-1]){
+            coordQueue.push(Coordinate(curr.getX(),curr.getY()-1));
+            // mark as explored
+            m_validLocations[curr.getX()][curr.getY()-1] = false;
+        }
+        // if we can move UP and havent' been to that cell yet, check there
+        if (m_validLocations[curr.getX()][curr.getY()+1]){
+            coordQueue.push(Coordinate(curr.getX(),curr.getY()+1));
+            // mark as explored
+            m_validLocations[curr.getX()][curr.getY()+1] = false;
+        }
+    }
+
 }

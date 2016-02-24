@@ -62,18 +62,25 @@ const float WATER_POOL_SIZE = 1.0;
 const int WATER_POOL_HITPOINTS = 100;
 
 // ALL PROTESTER CONSTANTS
-
+const GraphObject::Direction PROTESTER_DIR = GraphObject::left;
 const int PROTESTER_START_X = 60;
 const int PROTESTER_START_Y = 60;
 const int PROTESTER_STATE_REST = 1;
 const int PROTESTER_STATE_LEAVING = 2;
 const int PROTESTER_STATE_ACTIVE = 3;
-
+const int PROTESTER_DEPTH = 0;
+const float PROTESTER_SIZE = 1.0;
+const int PROTESTER_ANNOY_POINTS = 2;
+const int PROTESTER_ANNOY_DISTANCE = 4;
 // REGULAR PROTESTER CONSTANTS
-const GraphObject::Direction REGULAR_PROTESTER_DIR = GraphObject::left;
 const int REGULAR_PROTESTER_HITPOINTS = 5;
-const int REGULAR_PROTESTER_DEPTH = 0;
-const float REGULAR_PROTESTER_SIZE = 1.0;
+
+
+
+// HARDCORE PROTESTER CONSTANTS
+const int HARDCORE_PROTESTER_HITPOINTS = 20;
+
+
 /*
  * Class for all Actors.
  * Actors extend GraphObject and are basically every object in the game that does something
@@ -187,7 +194,7 @@ public:
 class OilBarrel : public Pickup{
 public:
     OilBarrel(StudentWorld* world, int x, int y);
-
+    virtual bool needsToBePickedUpToFinishLevel() const;
     virtual void doSomething();
 };
 
@@ -319,6 +326,7 @@ public:
 class Coordinate {
 public:
     Coordinate(int x, int y);
+    bool operator<(const Coordinate& foo1) const;
     // gets the euclidean distance between two positions
     float getDistance(Coordinate coord);
     int getX();

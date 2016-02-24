@@ -250,7 +250,14 @@ void Boulder::doSomething() {
     }
 }
 
+
+
 // OIL BARREL METHODS
+
+bool OilBarrel::needsToBePickedUpToFinishLevel() const {
+    return true;
+}
+
 OilBarrel::OilBarrel(StudentWorld *world, int x, int y) :
     Pickup(IID_BARREL, x, y, OIL_BARREL_DIR, OIL_BARREL_SIZE, OIL_BARREL_DEPTH, world){
     // TODO or nah
@@ -369,7 +376,6 @@ void WaterPool::doSomething() {
     if (frackMan){
         // the water pool is dead so it may be removed
         setDead();
-        // TODO hacked, fix this bug
         // sound effect TODO
         // add 100 points TODO
         // frackman gets 5 new squits of water
@@ -437,7 +443,7 @@ void Protester::setTicksToNextMove() {
 
 
 RegularProtester::RegularProtester( StudentWorld* world) :
-    Protester(IID_PROTESTER, REGULAR_PROTESTER_DIR, REGULAR_PROTESTER_SIZE, REGULAR_PROTESTER_DEPTH
+    Protester(IID_PROTESTER, PROTESTER_DIR, PROTESTER_SIZE, PROTESTER_DEPTH
     ,world,REGULAR_PROTESTER_HITPOINTS){
 
     setVisible(true);
@@ -472,10 +478,13 @@ void RegularProtester::doSomething() {
             // else move closer to exit
             break;
         case PROTESTER_STATE_ACTIVE:
+            setState(PROTESTER_STATE_REST);
             if(m_turnTicks>0) m_turnTicks--;
             if (!m_canShout) {
                 m_shoutTicks--;
             }
+
+            // TODO shoutign should freze tha protestereinos
             // if the ticks run out , then protester can shotu again!
             if (m_shoutTicks == 0){
                 m_shoutTicks = 15;
@@ -486,6 +495,7 @@ void RegularProtester::doSomething() {
                 // if the regular protester hasn't shouted within its last 15 ticks
                 // play shout sound
                 // annoy frackman
+                getWorld()->annoyAllNearbyActors(this, PROTESTER_ANNOY_POINTS,PROTESTER_ANNOY_DISTANCE);
                 m_canShout = false;
                 return;
             }
@@ -494,7 +504,7 @@ void RegularProtester::doSomething() {
             if (frackmanDir!=none && !getWorld()->findNearbyFrackMan(this,4)){
                 // if it could move the entire way to frackman with nothign in its path
                 // TODO A Regular Protester cannot move to a location that is within a radius of 3 (<= 3.0) units of a Boulder.
-                if (getWorld()->clearPathForwardToFrackman(this, frackmanDir)) {
+                if (getWorld()->isClearPathForwardToFrackman(this, frackmanDir)) {
                     // face teh direction of frackman
                     setDirection(frackmanDir);
                     // take oen step forward
@@ -752,4 +762,9 @@ int Coordinate::getX() {
 
 int Coordinate::getY() {
     return m_y;
+}
+
+//TODO ?
+bool Coordinate::operator<(const Coordinate &foo1) const {
+    return false;
 }
