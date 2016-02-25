@@ -499,6 +499,8 @@ void RegularProtester::doSomething() {
             }
             // otherwise you are already facing the direciton, then just move forward
             moveForward();
+            moveForward();
+            moveForward();
             break;
         case PROTESTER_STATE_ACTIVE:
             setState(PROTESTER_STATE_REST);
@@ -735,6 +737,7 @@ void FrackMan::doSomething() {
         for (int i=0; i <= 3; i++){
             for (int j=0; j <= 3; j++){
                 getWorld()->deleteDirt(getX()+i,getY()+j);
+
             }
         }
     }

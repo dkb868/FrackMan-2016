@@ -83,12 +83,18 @@ public:
     // makes to approach the FrackMan.
     GraphObject::Direction determineFirstMoveToFrackMan(int x, int y);
 
+    // update a spcific point on the distancemap
+    void updateDistanceMap(int x, int y);
+
     bool isWithinGrid(int x, int y);
 
 
     // populate the distanceMap, mapping each Coordinate to the amount of steps to the endpoint
     // from that coordinate
     void populateDistanceMap();
+	void populateDistanceMapNEW();
+	bool isWithinGridNEW(int x, int y);
+
 private:
 	// variable used to keep track of all Actors except Dirt
 	std::list<Actor*> m_game_objects;
@@ -102,7 +108,18 @@ private:
 	int m_nuggetCount;
     // structure to make navigation very efficient.
     // stores the distance to a certain location from every coordinate
-    int distanceMap[64][64];
+    int m_distanceMap[64][64];
+	int m_distanceMapNEW[16][16];
+
+
+	// get the neighbours of a specific point
+    std::vector<Coordinate> getNeighbours(int x, int y);
+	std::vector<Coordinate> getNeighboursNew(int x, int y);
+
+	// caculatel the distance for one point on the map
+    int calculateDistanceForOnePoint(int x, int y);
+
+
 
 };
 

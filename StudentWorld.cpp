@@ -91,6 +91,7 @@ int StudentWorld::init() {
 
     // populate the legendary distance map
     populateDistanceMap();
+       populateDistanceMapNEW();
 
 	return GWSTATUS_CONTINUE_GAME;
 }
@@ -333,8 +334,9 @@ bool StudentWorld::deleteDirt(int x, int y) {
 	if (m_dirt[x][y] != nullptr){
 		delete m_dirt[x][y];
 		m_dirt[x][y] = nullptr;
-
-        populateDistanceMap();
+        // update distanceMap
+        // TODO causes lag when game starts
+        updateDistanceMap(x,y);
         //is in the grid, take its distance
         // else if y+1 is in the grid, take its radius
         //
@@ -656,20 +658,44 @@ GraphObject::Direction StudentWorld::determineFirstMoveToExit(int x, int y) {
     float min = 10000;
     Coordinate chosenCoord(60,60);
     // make sure the current coordinate is not included
-    for(int i=-1;i <=1;i++) {
+ /* this is what auto and range based loops got rid of   for(int i=-1;i <=1;i++) {
         for (int j = -1; j <= 1; j++) {
             if (i==0 && j==0) continue;
             if(i==1 && j==1) continue;
             if (i==-1 && j==-1) continue;
             // if not found
             // distancemap only contains valid coordinates
-            int distance = distanceMap[x+i][y+j];
+            int distance = m_distanceMap[x+i][y+j];
             if (distance != -1) {
                 if (distance < min) {
-                    min = distanceMap[x+i][y+j];
+                    min = m_distanceMap[x+i][y+j];
                     chosenCoord = Coordinate(x + i, y + j);
                 }
             }
+        }
+    } */
+    // basically, we HAVE to move to one of the neighbours
+    // pprioritize the lowest number but because of 4x4 bullshit, this may not be valid
+    // go to the lowest number that is valid
+    auto neighbours = getNeighbours(x,y);
+    vector<Coordinate> validCoords;
+    for (auto coord : neighbours){
+        int distance = m_distanceMap[coord.getX()][coord.getY()];
+        // if it is a technically valid point
+        if (distance != -1){
+            // if it is a 4x4 valid point
+            if (isClear(coord.getX(),4,coord.getY(),4)){
+                validCoords.push_back(coord);
+            }
+        }
+    }
+
+    // get the valid coord with the min distance
+    for (auto coord : validCoords){
+        int distance = m_distanceMap[coord.getX()][coord.getY()];
+        if ((distance) < min){
+            min = distance;
+            chosenCoord = coord;
         }
     }
 
@@ -710,7 +736,7 @@ void StudentWorld::populateDistanceMap() {
         for(int m=0;m<64;m++) {
             m_validLocations[k][m] = false;
             // take this time to populate our map WITH -1
-            distanceMap[k][m] = -1;
+            m_distanceMap[k][m] = -1;
         }
     }
     coordQueue.push(Coordinate(60,60)); // put the starting poitn (AKA the protester end point)
@@ -741,45 +767,45 @@ void StudentWorld::populateDistanceMap() {
 
     // begin exploring
     int distance = 0;
-    distanceMap[60][60] = 0;
+    m_distanceMap[60][60] = 0;
     // mark starting location as encountered
     m_validLocations[60][60] = false;
     while(!coordQueue.empty()){
         Coordinate curr = coordQueue.front(); // get current location being explored
-        cout << "Currently exploring x= " << curr.getX() << " y= " << curr.getY() << endl;
+      //  cout << "Currently exploring x= " << curr.getX() << " y= " << curr.getY() << endl;
         // add this location to the map and store its distance from the end (which is the start 60 60)
         // the start is distance of 0
-        //distanceMap[curr.getX()][curr.getY()] = distance;
+        //m_distanceMap[curr.getX()][curr.getY()] = distance;
         coordQueue.pop();
-        cout << "Distance is now : " << distanceMap[curr.getX()][curr.getY()]  << endl;
+      //  cout << "Distance is now : " << m_distanceMap[curr.getX()][curr.getY()]  << endl;
         // check all the directions
         // first check LEFT
         // if we can move left and haven't been to taht cell yet
         if (m_validLocations[curr.getX()-1][curr.getY()]){
             coordQueue.push(Coordinate(curr.getX()-1, curr.getY()));
             // add to distance map
-            int debug = distanceMap[curr.getX()-1][curr.getY()] = distanceMap[curr.getX()][curr.getY()] + 1;
+            int debug = m_distanceMap[curr.getX()-1][curr.getY()] = m_distanceMap[curr.getX()][curr.getY()] + 1;
             // mark as explored
             m_validLocations[curr.getX()-1][curr.getY()] = false;
         }
         // if we can move RIGHT and havent' been to that cell yet, check there
         if (m_validLocations[curr.getX() +1][curr.getY()]){
             coordQueue.push(Coordinate(curr.getX()+1,curr.getY()));
-            int debug = distanceMap[curr.getX()+1][curr.getY()] = distanceMap[curr.getX()][curr.getY()] + 1;
+            int debug = m_distanceMap[curr.getX()+1][curr.getY()] = m_distanceMap[curr.getX()][curr.getY()] + 1;
             // mark as explored
             m_validLocations[curr.getX()+1][curr.getY()] = false;
         }
         // if we can move DOWN and havent' been to that cell yet, check there
         if (m_validLocations[curr.getX()][curr.getY()-1]){
             coordQueue.push(Coordinate(curr.getX(),curr.getY()-1));
-            int debug = distanceMap[curr.getX()][curr.getY()-1] = distanceMap[curr.getX()][curr.getY()] + 1;
+            int debug = m_distanceMap[curr.getX()][curr.getY()-1] = m_distanceMap[curr.getX()][curr.getY()] + 1;
             // mark as explored
             m_validLocations[curr.getX()][curr.getY()-1] = false;
         }
         // if we can move UP and havent' been to that cell yet, check there
         if (m_validLocations[curr.getX()][curr.getY()+1]){
             coordQueue.push(Coordinate(curr.getX(),curr.getY()+1));
-            int debug = distanceMap[curr.getX()][curr.getY()+1] = distanceMap[curr.getX()][curr.getY()] + 1;
+            int debug = m_distanceMap[curr.getX()][curr.getY()+1] = m_distanceMap[curr.getX()][curr.getY()] + 1;
             // mark as explored
             m_validLocations[curr.getX()][curr.getY()+1] = false;
         }
@@ -789,5 +815,195 @@ void StudentWorld::populateDistanceMap() {
 }
 
 bool StudentWorld::isWithinGrid(int x, int y) {
-    return (y < 64 && y >= 0 && x < 64 && x >= 0);
+    return (y <= 60 && y >= 0 && x <= 60 && x >= 0);
+}
+
+void StudentWorld::updateDistanceMap(int x, int y) {
+    vector<Coordinate> neighbours = getNeighbours(x,y);
+    queue<Coordinate> coordQueue;
+    coordQueue.push(Coordinate(x,y));
+    while(!coordQueue.empty()){
+        Coordinate curr = coordQueue.front();
+        m_distanceMap[curr.getX()][curr.getY()] = calculateDistanceForOnePoint(curr.getX(),curr.getY());
+        coordQueue.pop();
+        // for all the surroudning neighbours, make sure their values are still correct
+        // since changing one can end up changing a lot
+        for (auto coord : neighbours){
+            // if the new distance calculation and current value are not equal, update things, by adding it to coordinate queue
+            // TODO 4x4 objects on a 64x64 grid what the fuck?
+            if (calculateDistanceForOnePoint(coord.getX(),coord.getY()) != m_distanceMap[coord.getX()][coord.getY()]){
+                coordQueue.push(coord);
+            }
+        }
+
+    }
+
+}
+
+std::vector<Coordinate> StudentWorld::getNeighbours(int x, int y) {
+    vector<Coordinate> neighbours;
+    // check up
+    if (isWithinGrid(x,y+1)){
+        // only if it isn't dirt
+        if(m_dirt[x][y+1] == nullptr)
+            neighbours.push_back(Coordinate(x,y+1));
+    }
+    // check down
+    if (isWithinGrid(x,y-1)){
+        // only if it isn't dirt
+        if(m_dirt[x][y-1] == nullptr)
+        neighbours.push_back(Coordinate(x,y-1));
+    }
+    // check left
+    if (isWithinGrid(x-1,y)){
+        // only if it isn't dirt
+        if(m_dirt[x-1][y] == nullptr)
+        neighbours.push_back(Coordinate(x-1,y));
+    }
+    // check right
+    if (isWithinGrid(x+1,y)){
+        // only if it isn't dirt
+        if(m_dirt[x+1][y] == nullptr)
+        neighbours.push_back(Coordinate(x+1,y));
+    }
+    return neighbours;
+}
+// update the distance for one point on the map
+
+// TODO delete
+int StudentWorld::calculateDistanceForOnePoint(int x, int y) {
+    int min = 10000;
+    vector<Coordinate> neighbours = getNeighbours(x,y);
+    for (auto coord : neighbours){
+        if (m_distanceMap[coord.getX()][coord.getY()] < min){
+            min = m_distanceMap[coord.getX()][coord.getY()];
+        }
+    }
+    // the distance of any point is the distance of its minmum neighbour + 1;
+    return min  + 1;
+}
+
+
+void StudentWorld::populateDistanceMapNEW() {
+    queue<Coordinate> coordQueue;
+    // boolean array to keep track of whichc locations can be moved to
+    bool m_validLocations[16][16];
+    for(int k=0;k<16;k++){
+        for(int m=0;m<16;m++) {
+            m_validLocations[k][m] = false;
+            // take this time to populate our map WITH -1
+            m_distanceMapNEW[k][m] = -1;
+        }
+    }
+    coordQueue.push(Coordinate(15,15)); // put the starting poitn (AKA the protester end point)
+
+    for (int i=0;i<16;i++){
+        for(int j=0;j<16;j++){
+            // if its nto nullptr there is  dirt
+            // CHECK THE 4x4 BLOCK for dirt
+            if (!isClear(i*4,4,j*4,4)){
+                // appears to be working TODO
+                //cout << "INVALIDIDLAIDalid location: x =" << i << " y= " << j << endl;
+                m_validLocations[i][j] = false;
+            } else {
+                m_validLocations[i][j] = true;
+                // cout << "Valid location: x =" << i << " y= " << j << endl;
+            }
+        }
+    }
+
+    // all the boulders are also unpassable
+    // find all of them and update validLocations
+    for (auto actor : m_game_objects){
+        if(!actor->canActorsPassThroughMe()){
+            // TODO erase 4x4 block instead of jsut one spot LOL
+            // TODO 4x4 haven't dealt with this
+            m_validLocations[actor->getX()][actor->getY()] = false;
+            cout << "Boulder at x= " << actor->getX() << " y = " << actor->getY() << endl;
+        }
+    }
+
+    // begin exploring
+    m_distanceMapNEW[15][15] = 0;
+    // mark starting location as encountered
+    m_validLocations[15][15] = false;
+    while(!coordQueue.empty()){
+        Coordinate curr = coordQueue.front(); // get current location being explored
+        cout << "Currently exploring x= " << curr.getX() << " y= " << curr.getY() << endl;
+        // add this location to the map and store its distance from the end (which is the start 60 60)
+        // the start is distance of 0
+        //m_distanceMap[curr.getX()][curr.getY()] = distance;
+        coordQueue.pop();
+        // check all the directions
+        // first check LEFT
+        // if we can move left and haven't been to taht cell yet
+        auto neighbours = getNeighboursNew(curr.getX(),curr.getY());
+        for (auto coord: neighbours){
+                if(m_validLocations[coord.getX()][coord.getY()]){
+                    coordQueue.push(coord);
+                    // new coord = old distance + 1
+                    m_distanceMapNEW[coord.getX()][coord.getY()] = m_distanceMapNEW[curr.getX()][curr.getY()] + 1;
+                    m_validLocations[coord.getX()][coord.getY()] = false;
+                }
+        } /*
+        if (m_validLocations[curr.getX()-1][curr.getY()]){
+            coordQueue.push(Coordinate(curr.getX()-1, curr.getY()));
+            // add to distance map
+            int debug = m_distanceMapNEW[curr.getX()-1][curr.getY()] = m_distanceMapNEW[curr.getX()][curr.getY()] + 1;
+            // mark as explored
+            m_validLocations[curr.getX()-1][curr.getY()] = false;
+        }
+        // if we can move RIGHT and havent' been to that cell yet, check there
+        if (m_validLocations[curr.getX() +1][curr.getY()]){
+            coordQueue.push(Coordinate(curr.getX()+1,curr.getY()));
+            int debug = m_distanceMapNEW[curr.getX()+1][curr.getY()] = m_distanceMapNEW[curr.getX()][curr.getY()] + 1;
+            // mark as explored
+            m_validLocations[curr.getX()+1][curr.getY()] = false;
+        }
+        // if we can move DOWN and havent' been to that cell yet, check there
+        if (m_validLocations[curr.getX()][curr.getY()-1]){
+            coordQueue.push(Coordinate(curr.getX(),curr.getY()-1));
+            int debug = m_distanceMapNEW[curr.getX()][curr.getY()-1] = m_distanceMapNEW[curr.getX()][curr.getY()] + 1;
+            // mark as explored
+            m_validLocations[curr.getX()][curr.getY()-1] = false;
+        }
+        // if we can move UP and havent' been to that cell yet, check there
+        if (m_validLocations[curr.getX()][curr.getY()+1]){
+            coordQueue.push(Coordinate(curr.getX(),curr.getY()+1));
+            int debug = m_distanceMapNEW[curr.getX()][curr.getY()+1] = m_distanceMapNEW[curr.getX()][curr.getY()] + 1;
+            // mark as explored
+            m_validLocations[curr.getX()][curr.getY()+1] = false;
+        } */
+    }
+
+}
+
+
+bool StudentWorld::isWithinGridNEW(int x, int y) {
+    return (x < 16 && x >=0 && y < 16 && y >=0);
+}
+
+std::vector<Coordinate> StudentWorld::getNeighboursNew(int x, int y){
+    vector<Coordinate> neighbours;
+    // check up
+    if (isWithinGridNEW(x,y+1)){
+        // only if it isn't dirt
+            neighbours.push_back(Coordinate(x,y+1));
+    }
+    // check down
+    if (isWithinGridNEW(x,y-1)){
+        // only if it isn't dirt
+            neighbours.push_back(Coordinate(x,y-1));
+    }
+    // check left
+    if (isWithinGridNEW(x-1,y)){
+        // only if it isn't dirt
+            neighbours.push_back(Coordinate(x-1,y));
+    }
+    // check right
+    if (isWithinGridNEW(x+1,y)){
+        // only if it isn't dirt
+            neighbours.push_back(Coordinate(x+1,y));
+    }
+    return neighbours;
 }
