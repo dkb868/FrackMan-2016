@@ -73,7 +73,17 @@ public:
 
     bool isClearPathForwardToFrackman(Actor *a, GraphObject::Direction dir) const;
 
-    std::vector<Coordinate*> findAllCoordinatesWithinRadius(int x,int y,int radius);
+    std::vector<Coordinate> findAllCoordinatesWithinRadius(int x,int y,int radius) const;
+
+    // Determine the direction of the first move a quitting protester
+    // makes to leave the oil field.
+    GraphObject::Direction determineFirstMoveToExit(int x, int y);
+
+    // Determine the direction of the first move a hardcore protester
+    // makes to approach the FrackMan.
+    GraphObject::Direction determineFirstMoveToFrackMan(int x, int y);
+
+    bool isWithinGrid(int x, int y);
 
 
     // populate the distanceMap, mapping each Coordinate to the amount of steps to the endpoint
@@ -92,9 +102,11 @@ private:
 	int m_nuggetCount;
     // structure to make navigation very efficient.
     // stores the distance to a certain location from every coordinate
-    std::map<Coordinate, float> distanceMap;
+    int distanceMap[64][64];
 
 };
+
+// TODO check around frackman instaed of checking every actor
 
 
 

@@ -20,6 +20,10 @@ Actor::~Actor(){
 }
 
 
+int Actor::getState() {
+    return STATE_DEFAULT;
+}
+
 bool Actor::canDigThroughDirt() const {
     return false;
 }
@@ -459,7 +463,12 @@ RegularProtester::RegularProtester( StudentWorld* world) :
 
 void RegularProtester::doSomething() {
     // if not alive, immediateley return
-    if (!isAlive()) return;
+    if(getState() == PROTESTER_STATE_DELETE)
+        return;
+
+    if (!isAlive() && getState() != PROTESTER_STATE_LEAVING) {
+        setState(PROTESTER_STATE_LEAVING);
+    }
 
     switch(getState()){
         case PROTESTER_STATE_REST:
@@ -474,8 +483,22 @@ void RegularProtester::doSomething() {
             break;
         case PROTESTER_STATE_LEAVING:
             // if it is at the endpoint, set it to dead
-            if(getX() == 60 and getY() == 60) setDead();
+            // TODO that reducehitpoints is really ambiguous.
+            // SHOULD BE REPLACED BY CONSTANT
+            // SHOULD ALSO ENSURE HITPOITNS END UP AT -1
+            // UPDATE: SET IT TO A DELETED STATE
+            if(getX() == 60 and getY() == 60) {
+                setState(PROTESTER_STATE_DELETE);
+                // immediately return
+                return;
+            }
             // else move closer to exit
+            // if it is not facing this direction already , set it to this direction
+            if (getDirection() != getWorld()->determineFirstMoveToExit(getX(),getY()) ) {
+                setDirection(getWorld()->determineFirstMoveToExit(getX(),getY()));
+            }
+            // otherwise you are already facing the direciton, then just move forward
+            moveForward();
             break;
         case PROTESTER_STATE_ACTIVE:
             setState(PROTESTER_STATE_REST);
@@ -764,7 +787,13 @@ int Coordinate::getY() {
     return m_y;
 }
 
-//TODO ?
-bool Coordinate::operator<(const Coordinate &foo1) const {
-    return false;
+
+Coordinate::Coordinate() {
+
+}
+
+
+
+bool Coordinate::operator==(const Coordinate &coord) const {
+    return (m_x == coord.m_x && m_y == coord.m_y);
 }

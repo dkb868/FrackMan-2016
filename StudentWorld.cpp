@@ -2,6 +2,8 @@
 #include "Actor.h"
 #include <vector>
 #include <queue>
+#include <iostream>
+#include <sstream>
 using namespace std;
 
 GameWorld* createStudentWorld(string assetDir)
@@ -86,6 +88,10 @@ int StudentWorld::init() {
 
     // add a random protester
     m_game_objects.push_back(new RegularProtester(this));
+
+    // populate the legendary distance map
+    populateDistanceMap();
+
 	return GWSTATUS_CONTINUE_GAME;
 }
 
@@ -140,17 +146,38 @@ void StudentWorld::insertGameObject(int count, int xLower, int xUpper, int yLowe
 
 int StudentWorld::move()
 {
+
     // if frackman is dead, immediately restart the level
     if (!m_frackMan->isAlive()){
         return GWSTATUS_PLAYER_DIED;
     }
 	m_frackMan->doSomething();
-    // check if all oil barrels were picked up
-    bool allOilPickedUp = true;
+
     // Clean up all dead objects
+
+    // used to get the amount of oil for the game text
+    int oilCount = 0;
+    // TODO could get rid of this and the part of the loop below by updating oil conunt every time fracklord picks one up
 	for (std::list<Actor*>::iterator curr_actor = m_game_objects.begin(); curr_actor != m_game_objects.end();){
         // If the thing is dead
         if(!(*curr_actor)->isAlive()){
+            // DO NOT DELETE DEAD PROTESTERS IF THEY ARE IN LEAVING STATE
+            // i,e if it is not in special delete state, continue the loop
+            // leaving state currently implemented as hitpoints = 0
+            // deletion state is htipoitns = -1;
+            // UPDATE DELETION STATE IS A  CONSTANTS STATE
+            if ((*curr_actor)->huntsFrackMan()){
+                cout << (*curr_actor)->getX();
+                // TODO make constant
+                if ((*curr_actor)->getState() != PROTESTER_STATE_DELETE){
+                    // do somethign then move on
+                    (*curr_actor)->doSomething();
+                    curr_actor++;
+                    continue;
+                } else {
+                    //debug
+                }
+            }
             // get the currrent actor to be deleted
             Actor* temp = *curr_actor;
             // erase actor from list
@@ -162,14 +189,16 @@ int StudentWorld::move()
             (*curr_actor)->doSomething();
             // if there is still oil on the field, all the oil has not been picked up
             if ((*curr_actor)->needsToBePickedUpToFinishLevel()){
-                allOilPickedUp = false;
+                oilCount++;
             }
 
             ++curr_actor;
         }
 	}
+
+
     // if all the oil was picked up, the level is won
-    if (allOilPickedUp){
+    if (oilCount == 0){
         // make sound
         return GWSTATUS_FINISHED_LEVEL;
     }
@@ -196,6 +225,7 @@ int StudentWorld::move()
                     }
                 }
             }
+
             // pick random coord from the vector
             long randIndex = rand() % potentialCoordiantes.size();
             Coordinate choosenCoordiante = *potentialCoordiantes[randIndex];
@@ -207,6 +237,28 @@ int StudentWorld::move()
 
 
 	}
+
+    // DISPLAY TEXT AT THE TOP OF THE SCREEN
+    // shoudl look like Scr: 321000 Lvl: 52 Lives: 3 Hlth: 80% Wtr: 20 Gld: 3 Sonar: 1 Oil Left: 2
+    ostringstream gameStatString;
+    // add the score
+    gameStatString << "Scr: " << getScore() << " ";
+    // add the level
+    gameStatString << "Lvl: " << getLevel() << " ";
+    // add the lives
+    gameStatString << "Lives: " << getLives() << " ";
+    // get the health
+    gameStatString << "Hlth: " << (m_frackMan->getHitpoints() / PLAYER_HITPOINTS) * 100 << "%" << " ";
+    // get the water
+    gameStatString << "Wtr: " << m_frackMan->getWater() << " ";
+    // get the gold
+    gameStatString << "Gld: " << m_frackMan->getGold() << " ";
+    // get the sonar
+    gameStatString << "Sonar: " << m_frackMan->getSonar() << " ";
+    // get the oil
+    gameStatString << "Oil Left: " << oilCount << " ";
+    setGameStatText(gameStatString.str());
+
 	// This code is here merely to allow the game to build, run, and terminate after you hit enter a few times.
 	// Notice that the return value GWSTATUS_PLAYER_DIED will cause our framework to end the current level.
 	return GWSTATUS_CONTINUE_GAME;
@@ -276,10 +328,16 @@ StudentWorld::~StudentWorld() {
 
 
 // deletes dirt if possible and returns true if dirt is indeed deleted
+// also update the locationMap
 bool StudentWorld::deleteDirt(int x, int y) {
 	if (m_dirt[x][y] != nullptr){
 		delete m_dirt[x][y];
 		m_dirt[x][y] = nullptr;
+
+        populateDistanceMap();
+        //is in the grid, take its distance
+        // else if y+1 is in the grid, take its radius
+        //
 		return true;
 	}
 	return false;
@@ -317,6 +375,13 @@ bool StudentWorld::isClear(int x,int xRange, int y, int yRange) const{
 bool StudentWorld::canActorMoveTo(Actor *a, int x, int y) const {
     // if the spot is empty, return true, else false.
     // if the position is invalid return false immediately,
+
+
+    // if actor is a boulder
+    if(!a->canActorsPassThroughMe())
+        // check for dirt, only valid for boulderse
+        return isClear(x, 4, y, 1);
+
     // TODO copypasta fro mactor
     if (x >= 61 || x< 0) {
         if (y < 0 || y >= 61) {
@@ -324,19 +389,33 @@ bool StudentWorld::canActorMoveTo(Actor *a, int x, int y) const {
         }
     }
     // iterate game objects loop, check to see if any are at that spot that can't be passed through
-    for (std::list<Actor*>::const_iterator curr_actor = m_game_objects.begin(); curr_actor != m_game_objects.end(); ++curr_actor) {
+    for (Actor* curr_actor : m_game_objects) {
         // if the actor is at that location and cannot be passed through, return false
         // double for loops added to check the 4x4 block
-        for (int k = 0; k <= 3; k++) {
-            for (int j = 0; j <= 3; j++) {
-                if (!(*curr_actor)->canActorsPassThroughMe()) {
-                    if ((*curr_actor)->getX() + k == x && (*curr_actor)->getY() + j == y) {
+        // if the actor is a BOULDER
+        if (!(curr_actor)->canActorsPassThroughMe()) {
+            auto boulderCoords = findAllCoordinatesWithinRadius(curr_actor->getX(),curr_actor->getY(),4);
+            // 4x4 block of coords for the location we want to move to
+            auto locationBlockCoords = findAllCoordinatesWithinRadius(x,y,4);
+            // if there is any overlap between boulder coord and the actor coord return false
+            // for all the coordinates that make up the boulder
+            for (auto boulderCoordinate : boulderCoords){
+                for(auto locationCoordinate : locationBlockCoords)
+                    // if any part  that boulder is within the 4x4 block of the location that we want to move to
+                    if (boulderCoordinate.getX() == locationCoordinate.getX() && boulderCoordinate.getY() == locationCoordinate.getY()){
+                    // then we can't go there
+                        return false;
+
+                    }
+            }
+            /* old shit
+            for (int k = 0; k <= 3; k++) {
+                for (int j = 0; j <= 3; j++) {
+                    if ((curr_actor)->getX() + k == x && (curr_actor)->getY() + j == y) {
                         return false;
                     }
-                } else{
-                    break;
                 }
-            }
+            } */
         }
     }
 
@@ -346,10 +425,7 @@ bool StudentWorld::canActorMoveTo(Actor *a, int x, int y) const {
         return isClear(x,4,y,4);
     }
 
-    // if actor is a boulder
-    if(!a->canActorsPassThroughMe())
-        // check for dirt, only valid for boulderse
-        return isClear(x, 4, y, 1);
+
 
     return true;
 }
@@ -511,11 +587,10 @@ bool StudentWorld::isClearPathForwardToFrackman(Actor *a, GraphObject::Direction
 
 void StudentWorld::revealAllNearbyObjects(int x, int y, int radius) {
     // for every actor
-    for (Actor* actor : m_game_objects) {
-
+    for (auto actor : m_game_objects) {
         // check every coordinate nearby
-        for (Coordinate *coord : findAllCoordinatesWithinRadius(x, y, radius)) {
-            if(actor->getX() == coord->getX() && actor->getY() == coord->getY()){
+        for (auto coord : findAllCoordinatesWithinRadius(x, y, radius)) {
+            if(actor->getX() == coord.getX() && actor->getY() == coord.getY()){
                 // if the actor at that coordinate is invisble, make it visible
                 if(!actor->isVisible()){
                     actor->setVisible(true);
@@ -554,12 +629,12 @@ int StudentWorld::annoyAllNearbyActors(Actor *annoyer, int points, int radius) {
 
     return count;
 }
-
-vector<Coordinate*> StudentWorld::findAllCoordinatesWithinRadius(int x, int y, int radius) {
-    std::vector<Coordinate*> withinRadius;
+// TODO WARNING NOT ACTUALLY WITHIN RADIUS. ONLY FROM THE LEFT BOTTOM CORNER TO THE RIGHT UP
+vector<Coordinate> StudentWorld::findAllCoordinatesWithinRadius(int x, int y, int radius) const {
+    std::vector<Coordinate> withinRadius;
     for (int k=0; k <= radius-1; k++){
         for (int j=0; j <= radius-1; j++){
-            withinRadius.push_back(new Coordinate(x+k,y+j));
+            withinRadius.push_back(Coordinate(x+k,y+j));
         }
     }
     return withinRadius;
@@ -576,66 +651,143 @@ bool StudentWorld::isWithinRadius(Actor *a1, Actor *a2, int radius) const {
 }
 
 
+GraphObject::Direction StudentWorld::determineFirstMoveToExit(int x, int y) {
+    // check the blocks all around to find the nearest one , i.e smallest number
+    float min = 10000;
+    Coordinate chosenCoord(60,60);
+    // make sure the current coordinate is not included
+    for(int i=-1;i <=1;i++) {
+        for (int j = -1; j <= 1; j++) {
+            if (i==0 && j==0) continue;
+            if(i==1 && j==1) continue;
+            if (i==-1 && j==-1) continue;
+            // if not found
+            // distancemap only contains valid coordinates
+            int distance = distanceMap[x+i][y+j];
+            if (distance != -1) {
+                if (distance < min) {
+                    min = distanceMap[x+i][y+j];
+                    chosenCoord = Coordinate(x + i, y + j);
+                }
+            }
+        }
+    }
+
+    // TODO copypastad from lineofSight
+    // if the x values are equal there is either a lien of sight up or down
+    // TODO fix the fact thatits a 4x4 square or nah
+    if (chosenCoord.getX() == x){
+        if (chosenCoord.getY() < y){
+            return GraphObject::down;
+        } else {
+            // TODO what if equal?
+            return GraphObject::up;
+        }
+    }
+        // if the y values are equal, there is either a line of sight right or left
+    else if (chosenCoord.getY() == y){
+        if(chosenCoord.getX() < x){
+            return GraphObject::left;
+        } else {
+            // TODO same
+            return GraphObject::right;
+        }
+    } else {
+        return GraphObject::none;
+    }
+
+}
+
+GraphObject::Direction StudentWorld::determineFirstMoveToFrackMan(int x, int y) {
+    return GraphObject::left;
+}
+
 void StudentWorld::populateDistanceMap() {
     queue<Coordinate> coordQueue;
     // boolean array to keep track of whichc locations can be moved to
     bool m_validLocations[64][64];
+    for(int k=0;k<64;k++){
+        for(int m=0;m<64;m++) {
+            m_validLocations[k][m] = false;
+            // take this time to populate our map WITH -1
+            distanceMap[k][m] = -1;
+        }
+    }
     coordQueue.push(Coordinate(60,60)); // put the starting poitn (AKA the protester end point)
-    // mark starting location as encountered
-    m_validLocations[60][60] = false;
-    for (int i=0;i<64;i++){
-        for(int j=0;j<64;j++){
-            // if its nto nullptr there is no dirt
+
+    for (int i=0;i<61;i++){
+        for(int j=0;j<61;j++){
+            // if its nto nullptr there is  dirt
             if (m_dirt[i][j] != nullptr){
-                m_validLocations[i][j] = true;
-            } else {
+                // appears to be working TODO
+                //cout << "INVALIDIDLAIDalid location: x =" << i << " y= " << j << endl;
                 m_validLocations[i][j] = false;
+            } else {
+                m_validLocations[i][j] = true;
+               // cout << "Valid location: x =" << i << " y= " << j << endl;
             }
         }
     }
 
     // all the boulders are also unpassable
     // find all of them and update validLocations
-    for (Actor* actor : m_game_objects){
+    for (auto actor : m_game_objects){
         if(!actor->canActorsPassThroughMe()){
+            // TODO erase 4x4 block instead of jsut one spot LOL
             m_validLocations[actor->getX()][actor->getY()] = false;
+            cout << "Boulder at x= " << actor->getX() << " y = " << actor->getY() << endl;
         }
     }
 
     // begin exploring
-
+    int distance = 0;
+    distanceMap[60][60] = 0;
+    // mark starting location as encountered
+    m_validLocations[60][60] = false;
     while(!coordQueue.empty()){
         Coordinate curr = coordQueue.front(); // get current location being explored
+        cout << "Currently exploring x= " << curr.getX() << " y= " << curr.getY() << endl;
         // add this location to the map and store its distance from the end (which is the start 60 60)
-        distanceMap.insert(std::pair<Coordinate, float>(curr,calculateRadius(curr.getX(),curr.getY(),60,60)));
+        // the start is distance of 0
+        //distanceMap[curr.getX()][curr.getY()] = distance;
         coordQueue.pop();
-
+        cout << "Distance is now : " << distanceMap[curr.getX()][curr.getY()]  << endl;
         // check all the directions
         // first check LEFT
         // if we can move left and haven't been to taht cell yet
         if (m_validLocations[curr.getX()-1][curr.getY()]){
             coordQueue.push(Coordinate(curr.getX()-1, curr.getY()));
+            // add to distance map
+            int debug = distanceMap[curr.getX()-1][curr.getY()] = distanceMap[curr.getX()][curr.getY()] + 1;
             // mark as explored
             m_validLocations[curr.getX()-1][curr.getY()] = false;
         }
         // if we can move RIGHT and havent' been to that cell yet, check there
         if (m_validLocations[curr.getX() +1][curr.getY()]){
             coordQueue.push(Coordinate(curr.getX()+1,curr.getY()));
+            int debug = distanceMap[curr.getX()+1][curr.getY()] = distanceMap[curr.getX()][curr.getY()] + 1;
             // mark as explored
             m_validLocations[curr.getX()+1][curr.getY()] = false;
         }
         // if we can move DOWN and havent' been to that cell yet, check there
         if (m_validLocations[curr.getX()][curr.getY()-1]){
             coordQueue.push(Coordinate(curr.getX(),curr.getY()-1));
+            int debug = distanceMap[curr.getX()][curr.getY()-1] = distanceMap[curr.getX()][curr.getY()] + 1;
             // mark as explored
             m_validLocations[curr.getX()][curr.getY()-1] = false;
         }
         // if we can move UP and havent' been to that cell yet, check there
         if (m_validLocations[curr.getX()][curr.getY()+1]){
             coordQueue.push(Coordinate(curr.getX(),curr.getY()+1));
+            int debug = distanceMap[curr.getX()][curr.getY()+1] = distanceMap[curr.getX()][curr.getY()] + 1;
             // mark as explored
             m_validLocations[curr.getX()][curr.getY()+1] = false;
         }
+        distance++;
     }
 
+}
+
+bool StudentWorld::isWithinGrid(int x, int y) {
+    return (y < 64 && y >= 0 && x < 64 && x >= 0);
 }

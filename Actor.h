@@ -4,6 +4,11 @@
 #include "GraphObject.h"
 #include "StudentWorld.h"
 
+// GLOBAL CONSTANTS
+
+// Default State
+const int STATE_DEFAULT = 999;
+
 // DIRT CONSTANTS
 const GraphObject::Direction DIRT_DIR = GraphObject::right;
 const int DIRT_DEPTH = 3;
@@ -68,13 +73,15 @@ const int PROTESTER_START_Y = 60;
 const int PROTESTER_STATE_REST = 1;
 const int PROTESTER_STATE_LEAVING = 2;
 const int PROTESTER_STATE_ACTIVE = 3;
+const int PROTESTER_STATE_DELETE = 4;
 const int PROTESTER_DEPTH = 0;
 const float PROTESTER_SIZE = 1.0;
 const int PROTESTER_ANNOY_POINTS = 2;
 const int PROTESTER_ANNOY_DISTANCE = 4;
+
+
 // REGULAR PROTESTER CONSTANTS
 const int REGULAR_PROTESTER_HITPOINTS = 5;
-
 
 
 // HARDCORE PROTESTER CONSTANTS
@@ -127,6 +134,9 @@ public:
 
     // Annoy this actor.
     virtual bool annoy(int amt);
+
+    virtual int getState();
+
 
     // TODO delete function
     int getHitpoints();
@@ -325,8 +335,9 @@ public:
 // you can check if two objects are within radius.
 class Coordinate {
 public:
+    Coordinate();
     Coordinate(int x, int y);
-    bool operator<(const Coordinate& foo1) const;
+    bool operator==(const Coordinate& coord) const;
     // gets the euclidean distance between two positions
     float getDistance(Coordinate coord);
     int getX();
